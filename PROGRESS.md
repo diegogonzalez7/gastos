@@ -16,7 +16,7 @@ Aplicación personal en español para anotar ingresos y gastos en euros desde el
 - [x] Construir el resumen mensual, el registro, el historial y las categorías.
 - [x] Completar las copias, la instalación y el diseño claro y oscuro.
 - [x] Comprobar el flujo real en navegador, la persistencia y el arranque sin conexión. Corregir los problemas observados.
-- [ ] Documentar el uso, la instalación y la publicación.
+- [x] Documentar el uso, la instalación y la publicación.
 
 Los cambios se agrupan en commits por fase. La publicación de la web requiere aprobación del propietario.
 
@@ -29,3 +29,8 @@ Los cambios se agrupan en commits por fase. La publicación de la web requiere a
 - Pasaron los 14 casos de Playwright en Chromium, siete flujos en escritorio y móvil. Cubren altas y correcciones, traslados entre meses, búsqueda, categorías, borrado, copias válidas y dañadas, escrituras simultáneas y uso sin conexión bajo la ruta `/gastos/`.
 - Chromium validó la instalabilidad del manifiesto. Un perfil persistente recuperó su movimiento tras cerrar el navegador por completo y arrancar otra vez sin red.
 - WebKitGTK 2.54.3 en formato móvil permitió registrar un gasto, recargarlo, consultar su categoría y abrir el editor con su importe. El formulario abre con el foco en el importe.
+
+## Pendiente fuera del entorno
+
+- La instalación con los menús de Safari en un iPhone físico y de Chrome en un Android físico queda pendiente de una comprobación en esos dispositivos.
+- El propietario puede autorizar la publicación del sitio estático cuando quiera distribuir la aplicación.
