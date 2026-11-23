@@ -14,7 +14,7 @@ Aplicación personal en español para anotar ingresos y gastos en euros desde el
 - [x] Definir el flujo, la arquitectura y las fases.
 - [x] Implementar el modelo, la persistencia y las pruebas de cálculo y validación.
 - [x] Construir el resumen mensual, el registro, el historial y las categorías.
-- [ ] Completar las copias, la instalación y el diseño claro y oscuro.
+- [x] Completar las copias, la instalación y el diseño claro y oscuro.
 - [ ] Comprobar el flujo real en navegador, la persistencia y el arranque sin conexión. Corregir los problemas observados.
 - [ ] Documentar el uso, la instalación y la publicación.
 
@@ -24,3 +24,4 @@ Los cambios se agrupan en commits por fase. La publicación de la web requiere a
 
 - Cinco pruebas de dominio superadas con Node: importes, fechas, totales mensuales, orden y copias JSON.
 - La interfaz compila con TypeScript en modo estricto. El resumen, los accesos rápidos y el historial utilizan los datos reales de IndexedDB.
+- La compilación genera manifiesto, iconos instalables y caché local del código, la tipografía y la ilustración.
