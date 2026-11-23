@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react'
 import { categories, categoryIds, displayCategory, MAX_CONCEPT, money, newEntryId, parseAmount, validDay, type CategoryId, type Entry, type Kind } from '../ledger'
 import { changeEntry, saveEntry, storageMessage } from '../storage'
-import { Modal } from './ui'
+import { AmountInput, Modal } from './ui'
 
 export interface EditorDraft { original?: Entry, category?: CategoryId, date: string }
 
@@ -56,7 +56,7 @@ export function Editor({ draft, onClose, onSaved }: {
 
   return <Modal title={confirmDelete ? 'Eliminar movimiento' : old ? 'Editar movimiento' : 'Nuevo movimiento'} onClose={onClose} busy={busy}>
     {confirmDelete && old ? <div className="confirm-panel">
-      <p>Se eliminará <strong>{old.concept || categories[old.category].name}</strong> ({money(old.cents)}) de tu historial.</p>
+      <p>Se eliminará <strong>{old.concept || categories[old.category].name}</strong> (<span className="money">{money(old.cents)}</span>) de tu historial.</p>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={() => { setConfirmDelete(false); setError('') }}>Cancelar</button>
@@ -67,10 +67,7 @@ export function Editor({ draft, onClose, onSaved }: {
         <button type="button" aria-pressed={kind === 'expense'} onClick={() => selectKind('expense')}><ArrowUpRight size={18} />Gasto</button>
         <button type="button" aria-pressed={kind === 'income'} onClick={() => selectKind('income')}><ArrowDownLeft size={18} />Ingreso</button>
       </div>
-      <label className="field">Importe
-        <span className="amount-input"><input name="amount" type="text" inputMode="decimal" placeholder="0,00" aria-label="Importe"
-          maxLength={20} required autoComplete="off" value={amount} onChange={e => setAmount(e.target.value)} /><span>€</span></span>
-      </label>
+      <AmountInput label="Importe" value={amount} onChange={setAmount} />
       <label className="field">Concepto (opcional)<input name="concept" type="text" inputMode="text" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : 'Ej. Nómina de este mes'}
         maxLength={MAX_CONCEPT} value={concept} onChange={e => setConcept(e.target.value)} /></label>
       <div className="form-columns">

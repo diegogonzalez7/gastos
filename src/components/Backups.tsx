@@ -61,7 +61,7 @@ export function Backups({ onClose, onRestored }: {
       <div className="file-preview"><FileCheck2 size={23} /><strong>{preview.file}</strong></div>
       <p>La copia contiene <strong>{preview.ledger.entries.length} {preview.ledger.entries.length === 1 ? 'movimiento' : 'movimientos'}</strong>.
         Al restaurarla se reemplazará todo el historial de este dispositivo, que ahora contiene {preview.current.entries.length}.</p>
-      <p>Saldo inicial que se restaurará: <strong>{money(preview.ledger.openingCents)}</strong>.</p>
+      <p>Saldo inicial que se restaurará: <strong className="money">{money(preview.ledger.openingCents)}</strong>.</p>
       {preview.ledger.entries.length === 0 && <p className="form-error">Esta copia dejará tu historial vacío.</p>}
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={() => { setPreview(null); setError('') }}>Cancelar</button>

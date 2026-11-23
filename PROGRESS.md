@@ -57,3 +57,9 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - Los movimientos anteriores se conservan y Supermercado se agrupa con Alimentación.
 - Los formularios usan teclado decimal para importes, permiten saldo negativo y ajustan el panel al espacio visible cuando aparece el teclado.
 - Pendiente de comprobar el teclado físico en un iPhone.
+
+## Entrada y presentación de importes
+
+- Al empezar por coma o punto, el campo completa el cero y muestra la coma decimal. Funciona en gastos, ingresos y saldo inicial.
+- Las cifras de los importes tienen más separación y el símbolo del euro acompaña al valor escrito y a los importes del resumen, el historial y las copias.
+- Se añadió una prueba de registro de un gasto de 0,90 € empezando por la coma.

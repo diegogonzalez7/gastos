@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { parseOpening } from '../ledger'
 import { saveOpening, storageMessage } from '../storage'
-import { Modal } from './ui'
+import { AmountInput, Modal } from './ui'
 
 export function OpeningBalance({ original, onClose, onSaved }: {
   original: number, onClose: () => void, onSaved: () => void,
@@ -21,8 +21,7 @@ export function OpeningBalance({ original, onClose, onSaved }: {
   return <Modal title="Saldo inicial" onClose={onClose} busy={busy}>
     <form className="entry-form" onSubmit={save}>
       <p>Introduce cuánto dinero tenías antes del primer movimiento de tu historial.</p>
-      <label className="field">Saldo inicial en euros<input required type="text" inputMode="decimal" value={value}
-        onFocus={event => event.target.select()} onChange={event => setValue(event.target.value)} /></label>
+      <AmountInput label="Saldo inicial en euros" value={value} onChange={setValue} selectOnFocus />
       <button type="button" className="secondary" aria-pressed={negative} onClick={() => setNegative(!negative)}>
         {negative ? 'Saldo negativo' : 'Saldo positivo o cero'}
       </button>

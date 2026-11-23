@@ -29,6 +29,24 @@ export function Brand() {
   </span>
 }
 
+export function AmountInput({ label, value, onChange, selectOnFocus = false }: {
+  label: string, value: string, onChange: (value: string) => void, selectOnFocus?: boolean,
+}) {
+  const placeholder = '0,00'
+  return <label className="field">{label}
+    <span className="amount-input money">
+      <span className="amount-input-value">
+        <span className="amount-input-measure" aria-hidden="true">{value || placeholder}</span>
+        <input type="text" inputMode="decimal" placeholder={placeholder} aria-label={label}
+          maxLength={20} required autoComplete="off" value={value}
+          onFocus={selectOnFocus ? event => event.currentTarget.select() : undefined}
+          onChange={event => onChange(event.currentTarget.value.replace(/^[,.]/, '0,'))} />
+      </span>
+      <span className="amount-input-currency" aria-hidden="true">€</span>
+    </span>
+  </label>
+}
+
 export function Modal({ title, children, onClose, busy = false, className = '' }: {
   title: string, children: ReactNode, onClose: () => void, busy?: boolean, className?: string,
 }) {

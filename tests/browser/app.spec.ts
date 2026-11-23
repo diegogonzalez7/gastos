@@ -325,3 +325,22 @@ test('Supermercado anterior se agrupa en Alimentación sin perder movimientos', 
   await navigate(page, 'Categorías')
   await expect(page.getByRole('button', { name: 'Ver movimientos de Alimentación' })).toContainText('15,00')
 })
+
+test('escribir la coma primero completa el cero y guarda el gasto en céntimos', async ({ page }) => {
+  await page.getByRole('button', { name: 'Nuevo movimiento' }).click()
+  const dialog = page.getByRole('dialog')
+  const amount = dialog.getByLabel('Importe', { exact: true })
+  await amount.pressSequentially(',')
+  await expect(amount).toHaveValue('0,')
+  await amount.pressSequentially('9')
+  await expect(amount).toHaveValue('0,9')
+  await dialog.getByLabel('Categoría').selectOption('machine')
+  await dialog.getByRole('button', { name: 'Guardar movimiento' }).click()
+  await balance(page, '-0,90€')
+  await expect(page.getByRole('button', { name: 'Editar Máquina Trabajo' })).toContainText('0,90\u202f€')
+
+  await page.getByRole('button', { name: 'Editar saldo inicial' }).click()
+  const opening = dialog.getByLabel('Saldo inicial en euros')
+  await opening.fill('.25')
+  await expect(opening).toHaveValue('0,25')
+})

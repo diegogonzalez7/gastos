@@ -65,7 +65,7 @@ export const MAX_CONCEPT = 120
 export const currency = new Intl.NumberFormat('es-ES', {
   style: 'currency', currency: 'EUR', useGrouping: 'always',
 })
-export const money = (cents: number) => currency.format(cents / 100)
+export const money = (cents: number) => currency.format(cents / 100).replace(/\s+€$/, '\u202f€')
 
 function unsignedCents(input: string): number | null {
   let value = input.trim()

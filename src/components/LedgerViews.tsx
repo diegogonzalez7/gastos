@@ -19,7 +19,7 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
     <span className="entry-info"><strong>{title}</strong><small id={description + '-category'}>
       {entry.concept ? categories[category].name : incoming ? 'Ingreso' : 'Gasto'}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
     </small></span>
-    <span className={'entry-value' + (incoming ? ' positive' : '')} id={description + '-amount'}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
+    <span className={'entry-value money' + (incoming ? ' positive' : '')} id={description + '-amount'}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
     <ChevronRight className="entry-chevron" size={15} />
   </button>
 }
@@ -30,12 +30,12 @@ export function Balance({ totals }: { totals: Summary }) {
     <img className="hero-wallet" src={import.meta.env.BASE_URL + 'cartera.webp'} alt="" />
     <div className="balance-content">
       <div className="balance-label"><Wallet size={17} />Balance del mes</div>
-      <div className={'balance-amount' + (Math.abs(totals.balance) >= 100_000_000 ? ' long-amount' : '')}>{money(totals.balance)}</div>
+      <div className={'balance-amount money' + (Math.abs(totals.balance) >= 100_000_000 ? ' long-amount' : '')}>{money(totals.balance)}</div>
       <div className="balance-metrics">
         <div className="hero-metric"><span className="metric-icon income"><ArrowDownLeft size={19} /></span>
-          <span><small>Ingresos</small><strong>{money(totals.income)}</strong></span></div>
+          <span><small>Ingresos</small><strong className="money">{money(totals.income)}</strong></span></div>
         <div className="hero-metric"><span className="metric-icon expense"><ArrowUpRight size={19} /></span>
-          <span><small>Gastos</small><strong>{money(totals.expense)}</strong></span></div>
+          <span><small>Gastos</small><strong className="money">{money(totals.expense)}</strong></span></div>
       </div>
     </div>
   </section>
@@ -64,7 +64,7 @@ function SpendingRing({ totals }: { totals: Summary }) {
   })
   return <div className="ring" style={stops.length ? { background: 'conic-gradient(' + stops.join(', ') + ')' } : undefined}
     role="img" aria-label={'Gastos totales: ' + money(totals.expense)}>
-    <div className="ring-center"><small>Total gastos</small><strong>{money(totals.expense)}</strong></div>
+    <div className="ring-center"><small>Total gastos</small><strong className="money">{money(totals.expense)}</strong></div>
   </div>
 }
 
@@ -84,9 +84,9 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, o
   return <div className="view-stack">
     <Balance totals={totals} />
     <section className="panel account-strip" aria-label="Saldos de la cuenta">
-      <button onClick={onOpening} aria-label="Editar saldo inicial"><small>Saldo inicial</small><strong>{money(openingCents)} <ChevronRight size={14} /></strong></button>
-      <div><small>Saldo al cierre del mes</small><strong>{money(account.closing)}</strong></div>
-      <div><small>Saldo total del historial</small><strong>{money(account.total)}</strong></div>
+      <button onClick={onOpening} aria-label="Editar saldo inicial"><small>Saldo inicial</small><strong className="money">{money(openingCents)} <ChevronRight size={14} /></strong></button>
+      <div><small>Saldo al cierre del mes</small><strong className="money">{money(account.closing)}</strong></div>
+      <div><small>Saldo total del historial</small><strong className="money">{money(account.total)}</strong></div>
     </section>
     <Shortcuts onAdd={onAdd} />
     <div className="overview-panels">
@@ -167,7 +167,7 @@ export function CategoryView({ totals, onHistory, onAdd }: {
       <div className="panel-heading"><h2>{ranked.length ? 'De mayor a menor gasto' : 'Categorías de gasto'}</h2></div>
       {ranked.length ? ranked.map(({ category, cents, share }) => <button className="rank-row" key={category}
         aria-label={'Ver movimientos de ' + categories[category].name} onClick={() => onHistory(category)}>
-        <CategoryBadge category={category} /><span className="rank-detail"><span><strong>{categories[category].name}</strong><b>{money(cents)}</b></span>
+        <CategoryBadge category={category} /><span className="rank-detail"><span><strong>{categories[category].name}</strong><b className="money">{money(cents)}</b></span>
           <span className="bar-track"><i style={{ width: (share * 100) + '%', backgroundColor: categories[category].color }} /></span>
         </span><small>{percent(share)}</small><ChevronRight size={15} />
       </button>) : <div className="available-categories">
