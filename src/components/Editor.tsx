@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react'
-import { categories, categoryIds, MAX_CONCEPT, money, newEntryId, parseAmount, validDay, type CategoryId, type Entry, type Kind } from '../ledger'
+import { categories, categoryIds, displayCategory, MAX_CONCEPT, money, newEntryId, parseAmount, validDay, type CategoryId, type Entry, type Kind } from '../ledger'
 import { changeEntry, saveEntry, storageMessage } from '../storage'
 import { Modal } from './ui'
 
@@ -10,7 +10,7 @@ export function Editor({ draft, onClose, onSaved }: {
   draft: EditorDraft, onClose: () => void, onSaved: (date: string | null, message: string) => void,
 }) {
   const old = draft.original
-  const initialCategory = old?.category ?? draft.category ?? 'food'
+  const initialCategory = old ? displayCategory(old.category) : draft.category ?? 'food'
   const [kind, setKind] = useState<Kind>(categories[initialCategory].kind)
   const [category, setCategory] = useState<CategoryId>(initialCategory)
   const [amount, setAmount] = useState(old ? (old.cents / 100).toFixed(2).replace('.', ',') : '')
@@ -69,13 +69,13 @@ export function Editor({ draft, onClose, onSaved }: {
       </div>
       <label className="field">Importe
         <span className="amount-input"><input name="amount" type="text" inputMode="decimal" placeholder="0,00" aria-label="Importe"
-          maxLength={20} required autoComplete="off" data-initial-focus value={amount} onChange={e => setAmount(e.target.value)} /><span>€</span></span>
+          maxLength={20} required autoComplete="off" value={amount} onChange={e => setAmount(e.target.value)} /><span>€</span></span>
       </label>
-      <label className="field">Concepto (opcional)<input name="concept" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : 'Ej. Nómina de este mes'}
+      <label className="field">Concepto (opcional)<input name="concept" type="text" inputMode="text" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : 'Ej. Nómina de este mes'}
         maxLength={MAX_CONCEPT} value={concept} onChange={e => setConcept(e.target.value)} /></label>
       <div className="form-columns">
         <label className="field">Categoría<select value={category} onChange={e => setCategory(e.target.value as CategoryId)}>
-          {categoryIds.filter(id => categories[id].kind === kind).map(id => <option key={id} value={id}>{categories[id].name}</option>)}</select></label>
+          {(categoryIds.includes(category) ? categoryIds : [category, ...categoryIds]).filter(id => categories[id].kind === kind).map(id => <option key={id} value={id}>{categories[id].name}</option>)}</select></label>
         <label className="field">Fecha<input type="date" name="date" required min="0001-01-01" max="9999-12-31"
           value={date} onChange={e => setDate(e.target.value)} /></label>
       </div>

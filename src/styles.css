@@ -383,7 +383,9 @@ input::placeholder { color: var(--muted); opacity: .85; }
   .quick-button { flex-basis: 97px; min-height: 78px; }
   .quick-button span:not(.category-badge) { font-size: 12px; }
   .category-badge { width: 36px; height: 36px; }
-  .dialog { width: 100%; max-height: min(94dvh, calc(100dvh - env(safe-area-inset-top) - 8px)); margin: auto 0 0; border: 0; border-radius: 20px 20px 0 0; }
+  .dialog { width: 100%; max-height: min(94dvh, calc(100dvh - env(safe-area-inset-top) - 8px)); margin: 0; border: 0; border-radius: 20px 20px 0 0; background: transparent; box-shadow: none; overflow: hidden; }
+  .dialog[open] { display: flex; flex-direction: column; justify-content: flex-end; }
+  .dialog .sheet { overflow-y: auto; overscroll-behavior: contain; max-height: 100%; background: var(--surface); border-radius: 20px 20px 0 0; }
   .sheet { padding: 9px max(20px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
   .sheet-handle { display: block; width: 34px; height: 4px; border-radius: 8px; margin: 0 auto 14px; background: var(--line); }
   .sheet-heading { margin-bottom: 16px; }

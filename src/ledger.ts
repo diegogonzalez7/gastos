@@ -29,7 +29,16 @@ export const categories = {
 } as const
 
 export type CategoryId = keyof typeof categories
-export const categoryIds = Object.keys(categories) as CategoryId[]
+export const categoryIds: CategoryId[] = [
+  'food', 'transport', 'machine', 'clothes', 'hair', 'vet', 'meal', 'spotify',
+  'giftExpense', 'bet', 'quiniela', 'otherExpense',
+  'salary', 'betIncome', 'quinielaIncome', 'gift', 'otherIncome',
+]
+
+// Keep historical categories readable and combine existing supermarket entries with food.
+export function displayCategory(category: CategoryId): CategoryId {
+  return category === 'supermarket' ? 'food' : category
+}
 
 export interface Entry {
   id: string
@@ -139,7 +148,8 @@ export function summarize(entries: Entry[]) {
       income += entry.cents
     } else {
       expense += entry.cents
-      amounts.set(entry.category, (amounts.get(entry.category) ?? 0) + entry.cents)
+      const category = displayCategory(entry.category)
+      amounts.set(category, (amounts.get(category) ?? 0) + entry.cents)
     }
   }
   const breakdown = [...amounts].sort((a, b) => b[1] - a[1])

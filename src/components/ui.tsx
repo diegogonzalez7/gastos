@@ -37,10 +37,32 @@ export function Modal({ title, children, onClose, busy = false, className = '' }
   useEffect(() => {
     const dialog = ref.current!
     dialog.showModal()
-    dialog.querySelector<HTMLElement>('[data-initial-focus]')?.focus({ preventScroll: true })
+    const viewport = window.visualViewport
+    const fitViewport = () => {
+      if (!viewport || window.innerWidth > 520) return
+      dialog.style.top = viewport.offsetTop + 'px'
+      dialog.style.bottom = 'auto'
+      dialog.style.height = viewport.height + 'px'
+      dialog.style.maxHeight = viewport.height + 'px'
+    }
+    const revealField = (event: FocusEvent) => {
+      const field = event.target
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement)) return
+      window.setTimeout(() => field.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300)
+    }
+    fitViewport()
+    viewport?.addEventListener('resize', fitViewport)
+    viewport?.addEventListener('scroll', fitViewport)
+    dialog.addEventListener('focusin', revealField)
     const original = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { dialog.close(); document.body.style.overflow = original }
+    return () => {
+      viewport?.removeEventListener('resize', fitViewport)
+      viewport?.removeEventListener('scroll', fitViewport)
+      dialog.removeEventListener('focusin', revealField)
+      dialog.close()
+      document.body.style.overflow = original
+    }
   }, [])
   return <dialog ref={ref} className={'dialog ' + className} aria-labelledby={titleId}
     onCancel={event => { event.preventDefault(); if (!busy) onClose() }}

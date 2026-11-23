@@ -50,3 +50,10 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - [x] Preparar y verificar un ZIP para carga directa en Cloudflare Pages.
 - [x] Integrar el código de `mi-dinero` y la distribución de `gh-pages` en `main`. Comprobar que `docs/` coincide con la compilación y que abre el resumen y el formulario sin conexión bajo `/gastos/`.
 - [ ] Confirmar la activación del alojamiento y abrir la URL pública por HTTPS. La política de red del entorno bloqueó las consultas a la API de GitHub y al dominio de Pages.
+
+## Categorías y teclado móvil
+
+- Se ofrecen las categorías solicitadas, con Alimentación en lugar de Supermercado y Otro al final.
+- Los movimientos anteriores se conservan y Supermercado se agrupa con Alimentación.
+- Los formularios usan teclado decimal para importes, permiten saldo negativo y ajustan el panel al espacio visible cuando aparece el teclado.
+- Pendiente de comprobar el teclado físico en un iPhone.

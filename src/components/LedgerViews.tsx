@@ -3,20 +3,21 @@ import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Wallet, X,
 } from 'lucide-react'
 import {
-  capitalize, categories, categoryIds, dateLabel, money, searchText,
+  capitalize, categories, categoryIds, dateLabel, displayCategory, money, searchText,
   type CategoryId, type Entry, type Kind, type Summary,
 } from '../ledger'
 import { CategoryBadge, EmptyState } from './ui'
 
 export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, onEdit: (entry: Entry) => void, showDate?: boolean }) {
   const incoming = entry.kind === 'income'
-  const title = entry.concept || categories[entry.category].name
+  const category = displayCategory(entry.category)
+  const title = entry.concept || categories[category].name
   const description = useId()
   return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + title}
     aria-describedby={description + '-category ' + description + '-amount'}>
-    <CategoryBadge category={entry.category} />
+    <CategoryBadge category={category} />
     <span className="entry-info"><strong>{title}</strong><small id={description + '-category'}>
-      {entry.concept ? categories[entry.category].name : incoming ? 'Ingreso' : 'Gasto'}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
+      {entry.concept ? categories[category].name : incoming ? 'Ingreso' : 'Gasto'}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
     </small></span>
     <span className={'entry-value' + (incoming ? ' positive' : '')} id={description + '-amount'}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
     <ChevronRight className="entry-chevron" size={15} />
@@ -40,7 +41,7 @@ export function Balance({ totals }: { totals: Summary }) {
   </section>
 }
 
-const shortcuts: CategoryId[] = ['food', 'transport', 'leisure', 'home', 'salary']
+const shortcuts: CategoryId[] = ['food', 'transport', 'meal', 'clothes', 'salary']
 function Shortcuts({ onAdd }: { onAdd: (category?: CategoryId) => void }) {
   return <section className="quick-section" aria-labelledby="quick-title">
     <h2 id="quick-title">Registro rápido</h2>
@@ -121,8 +122,8 @@ export function History({ entries, category, onClearCategory, onEdit, onAdd }: {
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<Kind | 'all'>('all')
   const keyword = searchText(query)
-  const rows = entries.filter(entry => (kind === 'all' || entry.kind === kind) && (!category || entry.category === category) &&
-    (!keyword || searchText(entry.concept + ' ' + categories[entry.category].name).includes(keyword)))
+  const rows = entries.filter(entry => (kind === 'all' || entry.kind === kind) && (!category || displayCategory(entry.category) === category) &&
+    (!keyword || searchText(entry.concept + ' ' + categories[displayCategory(entry.category)].name).includes(keyword)))
   const grouped = new Map<string, Entry[]>()
   for (const entry of rows) {
     const group = grouped.get(entry.date) ?? []

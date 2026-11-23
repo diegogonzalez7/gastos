@@ -88,7 +88,7 @@ test('registro rápido, validación, tema y tamaño de pantalla', async ({ page 
   await page.getByRole('button', { name: 'Registrar en Transporte' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByLabel('Categoría')).toHaveValue('transport')
-  await expect(dialog.getByLabel('Importe', { exact: true })).toBeFocused()
+  await expect(dialog.getByLabel('Importe', { exact: true })).toHaveAttribute('inputmode', 'decimal')
   await dialog.getByLabel('Importe', { exact: true }).fill('-2')
   await dialog.getByLabel('Concepto').fill('Autobús')
   await dialog.getByRole('button', { name: 'Guardar movimiento' }).click()
@@ -108,7 +108,7 @@ test('registro rápido, validación, tema y tamaño de pantalla', async ({ page 
 })
 
 test('exportar y restaurar conserva todas las fechas y exige confirmación', async ({ page }) => {
-  await add(page, 'Libro', '15', '2023-12-29', 'leisure')
+  await add(page, 'Libro', '15', '2023-12-29', 'meal')
   await add(page, 'Billete', '3,55', '2024-01-02', 'transport')
   await backups(page)
   const downloadPromise = page.waitForEvent('download')
@@ -167,7 +167,7 @@ test('la PWA abre bajo una subruta y el libro funciona sin red', async ({ page, 
 })
 
 test('editar el tipo y la fecha traslada el importe al mes correcto', async ({ page }) => {
-  await add(page, 'Devolución', '12,40', '2024-12-31', 'shopping')
+  await add(page, 'Devolución', '12,40', '2024-12-31', 'clothes')
   await page.getByRole('button', { name: 'Editar Devolución' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('button', { name: 'Ingreso', exact: true }).click()
@@ -203,7 +203,7 @@ test('una restauración detecta cambios posteriores a la vista previa', async ({
 })
 
 test('dos ventanas no sobrescriben una edición ya guardada', async ({ page, context }) => {
-  await page.getByRole('button', { name: 'Registrar en Hogar' }).click()
+  await page.getByRole('button', { name: 'Registrar en Ropa' }).click()
   await page.getByLabel('Importe', { exact: true }).fill('30')
   await page.getByLabel('Concepto').fill('Luz')
   await page.getByRole('button', { name: 'Guardar movimiento' }).click()
@@ -229,8 +229,8 @@ test('el saldo inicial acompaña el historial y se restaura con la copia', async
     await expect(page.getByRole('dialog')).toHaveCount(0)
   }
   await setOpening('500')
-  await add(page, '', '15,25', '2024-09-01', 'supermarket')
-  await expect(page.getByRole('button', { name: 'Editar Supermercado' })).toBeVisible()
+  await add(page, '', '15,25', '2024-09-01', 'food')
+  await expect(page.getByRole('button', { name: 'Editar Alimentación' })).toBeVisible()
   await add(page, '', '120', '2024-11-15', 'salary')
   await balance(page, '120,00€')
   const balances = page.getByRole('region', { name: 'Saldos de la cuenta' }).locator('strong')
@@ -245,11 +245,16 @@ test('el saldo inicial acompaña el historial y se restaura con la copia', async
   const path = (await (await filePromise).path())!
   expect(JSON.parse(await readFile(path, 'utf8')).openingCents).toBe(50000)
   await page.getByRole('button', { name: 'Cerrar' }).click()
-  await setOpening('-50')
+  await page.getByRole('button', { name: 'Editar saldo inicial' }).click()
+  await page.getByLabel('Saldo inicial en euros').fill('50')
+  await page.getByRole('button', { name: 'Saldo positivo o cero' }).click()
+  await page.getByRole('button', { name: 'Guardar saldo inicial' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(balances.nth(2)).toContainText('54,75')
   await backups(page)
   await page.getByLabel('Archivo de copia').setInputFiles(path)
   await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.reload()
   await expect(balances.first()).toContainText('500,00')
   await expect(balances.nth(2)).toContainText('604,75')
@@ -276,4 +281,47 @@ test('actualizar la app conserva la base de datos anterior', async ({ browser, p
     await expect(strip.locator('strong').last()).toContainText('-14,00')
     await expect(strip.locator('strong').first()).toContainText('0,00')
   } finally { await fresh.close() }
+})
+
+test('categorías solicitadas, teclado y movimientos de versiones anteriores', async ({ page }) => {
+  await page.getByRole('button', { name: 'Nuevo movimiento' }).click()
+  const dialog = page.getByRole('dialog')
+  const amount = dialog.getByLabel('Importe', { exact: true })
+  await expect(amount).toHaveAttribute('inputmode', 'decimal')
+  await expect(amount).not.toBeFocused()
+  await expect(dialog.getByLabel('Concepto')).toHaveAttribute('inputmode', 'text')
+  const options = await dialog.getByLabel('Categoría').locator('option').allTextContents()
+  expect(options).toEqual(['Alimentación', 'Transporte', 'Máquina Trabajo', 'Ropa', 'Peluquería', 'Veterinario', 'Comida', 'Spotify', 'Regalo', 'Bet365', 'Quiniela', 'Otro'])
+  await dialog.getByRole('button', { name: 'Ingreso', exact: true }).click()
+  expect(await dialog.getByLabel('Categoría').locator('option').allTextContents()).toEqual(['Nómina', 'Bet365', 'Quiniela', 'Regalo', 'Otro'])
+  await dialog.getByRole('button', { name: 'Cerrar' }).click()
+  await page.getByRole('button', { name: 'Editar saldo inicial' }).click()
+  await expect(page.getByLabel('Saldo inicial en euros')).toHaveAttribute('inputmode', 'decimal')
+})
+
+test('Supermercado anterior se agrupa en Alimentación sin perder movimientos', async ({ page }) => {
+  const ledger = {
+    app: 'mi-dinero', version: 2, currency: 'EUR', openingCents: 0,
+    transactions: [
+      { id: '11111111-1111-4111-8111-111111111111', kind: 'expense', category: 'supermarket', cents: 1000, date: '2024-09-01', concept: 'Compra antigua', createdAt: 1 },
+      { id: '22222222-2222-4222-8222-222222222222', kind: 'expense', category: 'food', cents: 500, date: '2024-09-01', concept: 'Compra nueva', createdAt: 2 },
+      { id: '33333333-3333-4333-8333-333333333333', kind: 'expense', category: 'home', cents: 200, date: '2024-09-01', concept: 'Anterior hogar', createdAt: 3 },
+    ],
+  }
+  await backups(page)
+  await page.getByLabel('Archivo de copia').setInputFiles({ name: 'anterior.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(ledger)) })
+  await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+  await navigate(page, 'Movimientos')
+  await page.getByRole('button', { name: 'Elegir periodo' }).click()
+  await page.getByRole('button', { name: 'Todos los meses' }).click()
+  await page.getByRole('button', { name: 'Editar Compra antigua' }).click()
+  await expect(page.getByLabel('Categoría')).toHaveValue('food')
+  await page.getByRole('button', { name: 'Guardar cambios' }).click()
+  await page.getByRole('button', { name: 'Editar Anterior hogar' }).click()
+  await expect(page.getByLabel('Categoría')).toHaveValue('home')
+  await page.getByRole('button', { name: 'Cerrar' }).click()
+  await page.getByRole('button', { name: 'Elegir periodo' }).click()
+  await page.getByRole('button', { name: 'Septiembre' }).click()
+  await navigate(page, 'Categorías')
+  await expect(page.getByRole('button', { name: 'Ver movimientos de Alimentación' })).toContainText('15,00')
 })
