@@ -227,6 +227,7 @@ test('dos ventanas no sobrescriben una edición ya guardada', async ({ page, con
   await second.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(second.getByRole('alert')).toContainText('otra ventana')
   await second.getByRole('button', { name: 'Cerrar' }).click()
+  await second.getByRole('button', { name: 'Descartar cambios' }).click()
   await balance(second, '-40,00€')
 })
 
@@ -304,6 +305,7 @@ test('categorías solicitadas, teclado y movimientos de versiones anteriores', a
   await dialog.getByRole('button', { name: 'Ingreso', exact: true }).click()
   expect(await dialog.getByLabel('Categoría').locator('option').allTextContents()).toEqual(['Nómina', 'Bet365', 'Quiniela', 'Regalo', 'Otro'])
   await dialog.getByRole('button', { name: 'Cerrar' }).click()
+  await dialog.getByRole('button', { name: 'Descartar cambios' }).click()
   await page.getByRole('button', { name: 'Editar saldo inicial' }).click()
   await expect(page.getByLabel('Saldo inicial en euros')).toHaveAttribute('inputmode', 'decimal')
 })
