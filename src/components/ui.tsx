@@ -40,7 +40,12 @@ export function AmountInput({ label, value, onChange, selectOnFocus = false }: {
         <input type="text" inputMode="decimal" placeholder={placeholder} aria-label={label}
           maxLength={20} required autoComplete="off" value={value}
           onFocus={selectOnFocus ? event => event.currentTarget.select() : undefined}
-          onChange={event => onChange(event.currentTarget.value.replace(/^[,.]/, '0,'))} />
+          onChange={event => {
+            let next = event.currentTarget.value.trim().replace(/^[,.]/, '0,')
+            // Keep pasted Spanish amounts with thousands separators editable.
+            if (/^-?\d{1,3}(\.\d{3})+,\d{0,2}$/.test(next)) next = next.replaceAll('.', '')
+            if (/^-?\d*(?:[,.]\d{0,2})?$/.test(next)) onChange(next)
+          }} />
       </span>
       <span className="amount-input-currency" aria-hidden="true">€</span>
     </span>

@@ -63,3 +63,10 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - Al empezar por coma o punto, el campo completa el cero y muestra la coma decimal. Funciona en gastos, ingresos y saldo inicial.
 - Las cifras de los importes tienen más separación y el símbolo del euro acompaña al valor escrito y a los importes del resumen, el historial y las copias.
 - Se añadió una prueba de registro de un gasto de 0,90 € empezando por la coma.
+
+## Registro frecuente y recuperación de datos
+
+- Se limitan a dos los decimales que se pueden introducir en el campo de importe.
+- El formulario destaca las fechas de otro mes, permite cambiar la fecha a hoy y pide confirmación antes de descartar cambios.
+- Se pueden duplicar movimientos guardados para revisarlos con la fecha de hoy antes de guardar la copia.
+- Las copias muestran la última fecha de exportación y permiten compartir el JSON cuando el navegador lo admite. La restauración muestra el periodo de la copia y ofrece descargar el historial actual antes de reemplazarlo.

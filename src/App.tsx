@@ -170,7 +170,8 @@ export default function App() {
       <button className="nav-item" onClick={() => setUtility('more')}><Ellipsis size={21} /><span>Más</span></button></nav>
     {editingOpening !== null && <OpeningBalance original={editingOpening} onClose={() => setEditingOpening(null)}
       onSaved={() => { setEditingOpening(null); void reload(); notify('Saldo inicial guardado') }} />}
-    {editor && <Editor draft={editor} onClose={() => setEditor(null)} onSaved={saved} />}
+    {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} onClose={() => setEditor(null)}
+      onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} />}
     {utility === 'more' && <Modal title="Más opciones" onClose={() => setUtility(null)}>
       <button className="more-backup" onClick={() => setUtility('backup')}><Archive size={20} />Copias de seguridad<ChevronRight size={17} /></button>
       <details className="iphone-install"><summary>Instalar en la pantalla de inicio del iPhone</summary>
@@ -179,7 +180,7 @@ export default function App() {
       <div className="more-theme"><h3>Apariencia</h3>{themeControl}</div>
       <p className="local-note"><Database size={17} />Tus datos se guardan en este dispositivo.</p>
     </Modal>}
-    {utility === 'backup' && <Backups onClose={() => setUtility(null)}
+    {utility === 'backup' && <Backups ledger={loadState === 'ready' ? { entries, openingCents } : null} onClose={() => setUtility(null)}
       onRestored={() => { setUtility(null); void reload(); notify('Copia restaurada') }} />}
     {toast && <div className="toast" role="status"><Check size={17} />{toast.label}<button aria-label="Ocultar aviso" onClick={() => setToast(null)}><X size={14} /></button></div>}
   </div>
