@@ -34,3 +34,9 @@ Los cambios se agrupan en commits por fase. La publicación de la web requiere a
 
 - La instalación con los menús de Safari en un iPhone físico y de Chrome en un Android físico queda pendiente de una comprobación en esos dispositivos.
 - El propietario puede autorizar la publicación del sitio estático cuando quiera distribuir la aplicación.
+
+## Seguimiento desde septiembre
+
+- [x] Añadir las categorías del Excel y permitir movimientos fechados con concepto opcional.
+- [ ] Incorporar el saldo inicial, el acumulado mensual y su copia de seguridad.
+- [ ] Verificar la actualización y facilitar la instalación desde Safari.

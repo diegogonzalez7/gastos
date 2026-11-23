@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from 'react'
 import {
-  BookOpen, BriefcaseBusiness, Gift, HeartPulse, House, Landmark, Laptop, Layers3,
+  Coffee, Music, PawPrint, Scissors, Shirt, Utensils, BookOpen, BriefcaseBusiness, Gift, HeartPulse, House, Landmark, Laptop, Layers3,
   Plane, ReceiptText, ShoppingBag, ShoppingBasket, Ticket, TrainFront, X, type LucideIcon,
 } from 'lucide-react'
 import { categories, type CategoryId } from '../ledger'
@@ -9,6 +9,8 @@ const icons: Record<CategoryId, LucideIcon> = {
   food: ShoppingBasket, transport: TrainFront, leisure: Ticket, home: House,
   health: HeartPulse, shopping: ShoppingBag, travel: Plane, education: BookOpen,
   otherExpense: Layers3, salary: BriefcaseBusiness, freelance: Laptop,
+  supermarket: ShoppingBasket, meal: Utensils, machine: Coffee, clothes: Shirt, hair: Scissors, vet: PawPrint,
+  spotify: Music, giftExpense: Gift, bet: Ticket, quiniela: Ticket, betIncome: Ticket, quinielaIncome: Ticket,
   gift: Gift, otherIncome: Landmark,
 }
 

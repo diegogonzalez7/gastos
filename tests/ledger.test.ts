@@ -50,7 +50,7 @@ test('la copia versionada admite todos los movimientos y también una cartera va
 
 test('una copia dañada, incompatible o duplicada se rechaza entera', () => {
   for (const patch of [
-    { cents: 0 }, { cents: 1.5 }, { cents: 1e15 }, { concept: ' ' }, { kind: 'something' },
+    { cents: 0 }, { cents: 1.5 }, { cents: 1e15 }, { concept: 9 }, { kind: 'something' },
     { category: 'salary' }, { category: '__proto__' }, { date: '2024-02-31' }, { id: 'x' }, { createdAt: -1 },
   ]) assert.throws(() => readBackup(JSON.stringify({ ...makeBackup([]), transactions: [income, { ...expense, ...patch }] })))
   for (const text of ['{', 'null', '{}', JSON.stringify(makeBackup([expense, expense])),

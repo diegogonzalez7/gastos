@@ -10,12 +10,13 @@ import { CategoryBadge, EmptyState } from './ui'
 
 export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, onEdit: (entry: Entry) => void, showDate?: boolean }) {
   const incoming = entry.kind === 'income'
+  const title = entry.concept || categories[entry.category].name
   const description = useId()
-  return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + entry.concept}
+  return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + title}
     aria-describedby={description + '-category ' + description + '-amount'}>
     <CategoryBadge category={entry.category} />
-    <span className="entry-info"><strong>{entry.concept}</strong><small id={description + '-category'}>
-      {categories[entry.category].name}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
+    <span className="entry-info"><strong>{title}</strong><small id={description + '-category'}>
+      {entry.concept ? categories[entry.category].name : incoming ? 'Ingreso' : 'Gasto'}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
     </small></span>
     <span className={'entry-value' + (incoming ? ' positive' : '')} id={description + '-amount'}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
     <ChevronRight className="entry-chevron" size={15} />

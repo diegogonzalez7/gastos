@@ -9,11 +9,23 @@ export const categories = {
   shopping: { name: 'Compras', kind: 'expense', color: '#bf8f68' },
   travel: { name: 'Viajes', kind: 'expense', color: '#6ba7b8' },
   education: { name: 'Educación', kind: 'expense', color: '#99aa63' },
-  otherExpense: { name: 'Otros gastos', kind: 'expense', color: '#8998a2' },
+  otherExpense: { name: 'Otro', kind: 'expense', color: '#8998a2' },
+  supermarket: { name: 'Supermercado', kind: 'expense', color: '#85a458' },
+  meal: { name: 'Comida', kind: 'expense', color: '#ca7750' },
+  machine: { name: 'Máquina Trabajo', kind: 'expense', color: '#ba8759' },
+  clothes: { name: 'Ropa', kind: 'expense', color: '#c285ac' },
+  hair: { name: 'Peluquería', kind: 'expense', color: '#bb91bf' },
+  vet: { name: 'Veterinario', kind: 'expense', color: '#7a9fb3' },
+  spotify: { name: 'Spotify', kind: 'expense', color: '#56a969' },
+  giftExpense: { name: 'Regalo', kind: 'expense', color: '#bc879d' },
+  bet: { name: 'Bet365', kind: 'expense', color: '#599778' },
+  quiniela: { name: 'Quiniela', kind: 'expense', color: '#b1965e' },
+  betIncome: { name: 'Bet365', kind: 'income', color: '#599778' },
+  quinielaIncome: { name: 'Quiniela', kind: 'income', color: '#b1965e' },
   salary: { name: 'Nómina', kind: 'income', color: '#55a889' },
   freelance: { name: 'Trabajo independiente', kind: 'income', color: '#639bb5' },
-  gift: { name: 'Regalos', kind: 'income', color: '#b78cc5' },
-  otherIncome: { name: 'Otros ingresos', kind: 'income', color: '#879f93' },
+  gift: { name: 'Regalo', kind: 'income', color: '#b78cc5' },
+  otherIncome: { name: 'Otro', kind: 'income', color: '#879f93' },
 } as const
 
 export type CategoryId = keyof typeof categories
@@ -126,7 +138,7 @@ function readEntry(value: unknown): Entry {
       || typeof cents !== 'number' || !Number.isSafeInteger(cents) || cents <= 0 || cents > MAX_CENTS
       || typeof category !== 'string' || !Object.hasOwn(categories, category)
       || categories[category as CategoryId].kind !== kind
-      || typeof concept !== 'string' || !concept.trim() || concept.length > MAX_CONCEPT
+      || typeof concept !== 'string' || concept.length > MAX_CONCEPT
       || !validDay(date) || typeof createdAt !== 'number' || !Number.isSafeInteger(createdAt) || createdAt < 0) {
     throw new Error('La copia contiene un movimiento con datos no válidos.')
   }

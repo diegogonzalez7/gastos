@@ -32,7 +32,6 @@ export function Editor({ draft, onClose, onSaved }: {
     if (busy) return
     const cents = parseAmount(amount)
     if (!cents) { setError('Introduce un importe entre 0,01 € y 999.999.999,99 €, con un máximo de dos decimales.'); return }
-    if (!concept.trim()) { setError('Escribe un concepto para reconocer el movimiento.'); return }
     if (!validDay(date)) { setError('Elige una fecha válida.'); return }
     setBusy(true)
     setError('')
@@ -57,7 +56,7 @@ export function Editor({ draft, onClose, onSaved }: {
 
   return <Modal title={confirmDelete ? 'Eliminar movimiento' : old ? 'Editar movimiento' : 'Nuevo movimiento'} onClose={onClose} busy={busy}>
     {confirmDelete && old ? <div className="confirm-panel">
-      <p>Se eliminará <strong>{old.concept}</strong> ({money(old.cents)}) de tu historial.</p>
+      <p>Se eliminará <strong>{old.concept || categories[old.category].name}</strong> ({money(old.cents)}) de tu historial.</p>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={() => { setConfirmDelete(false); setError('') }}>Cancelar</button>
@@ -72,8 +71,8 @@ export function Editor({ draft, onClose, onSaved }: {
         <span className="amount-input"><input name="amount" type="text" inputMode="decimal" placeholder="0,00" aria-label="Importe"
           maxLength={20} required autoComplete="off" data-initial-focus value={amount} onChange={e => setAmount(e.target.value)} /><span>€</span></span>
       </label>
-      <label className="field">Concepto<input name="concept" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : 'Ej. Nómina de este mes'}
-        maxLength={MAX_CONCEPT} required value={concept} onChange={e => setConcept(e.target.value)} /></label>
+      <label className="field">Concepto (opcional)<input name="concept" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : 'Ej. Nómina de este mes'}
+        maxLength={MAX_CONCEPT} value={concept} onChange={e => setConcept(e.target.value)} /></label>
       <div className="form-columns">
         <label className="field">Categoría<select value={category} onChange={e => setCategory(e.target.value as CategoryId)}>
           {categoryIds.filter(id => categories[id].kind === kind).map(id => <option key={id} value={id}>{categories[id].name}</option>)}</select></label>
