@@ -60,11 +60,13 @@ Las pruebas de dominio cubren céntimos, fechas, totales y validación de copias
 
 El sitio puede alojarse en cualquier servidor estático con HTTPS. Antes de publicarlo, ejecuta las pruebas y `npm run build`. Sube **el contenido** de `dist/`, con su estructura de carpetas. Mantén `sw.js`, `index.html` y `manifest.webmanifest` en el mismo directorio. Las rutas son relativas y admiten tanto un dominio raíz como una subruta.
 
-Para usar GitHub Pages si tu repositorio dispone de Pages en su plan gratuito:
+En este repositorio, la versión compilada para GitHub Pages está en `main/docs/`.
 
-1. Coloca el contenido compilado de `dist/` en la raíz de una rama de publicación, por ejemplo `gh-pages`, y añade allí un archivo vacío `.nojekyll`.
-2. En **Settings → Pages → Build and deployment**, elige **Deploy from a branch**, la rama de publicación y **/(root)**. Guarda la selección.
-3. Abre la dirección HTTPS que indique GitHub y comprueba la instalación y la reapertura sin red desde el móvil.
+1. Abre **Settings → Pages → Build and deployment** en GitHub.
+2. Elige **Deploy from a branch**, selecciona **main** y **/docs**, y pulsa **Save**.
+3. Cuando GitHub indique que el despliegue ha terminado, pulsa **Visit site** y abre la dirección HTTPS en Safari.
+
+Para preparar una actualización de esa carpeta desde la raíz del proyecto, ejecuta `npm test` y `npm run build -- --outDir docs`. Vite regenera la carpeta de publicación. Vuelve a crear el archivo vacío `docs/.nojekyll` y sube los cambios de `docs/` junto con el código a `main`.
 
 Para actualizar una publicación, vuelve a compilar y sustituye sus archivos estáticos en la misma dirección. El navegador descarga la nueva versión con conexión y la activa después de cerrar las ventanas de la versión anterior.
 

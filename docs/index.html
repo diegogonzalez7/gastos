@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f6f8f6" />
+    <meta name="description" content="Registra tus ingresos y gastos, consulta el balance de cada mes y guarda tus movimientos en tu dispositivo." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Mi Dinero" />
+    <link rel="icon" type="image/png" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch.png" />
+    <title>Mi Dinero</title>
+    <script>
+      try {
+        var choice = localStorage.getItem('mi-dinero:theme')
+        document.documentElement.dataset.theme = choice === 'dark' || (choice !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
+      } catch {}
+    </script>
+    <script type="module" crossorigin src="./assets/index-CYWgSRge.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BkqeTeHH.css">
+  <link rel="manifest" href="./manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="./registerSW.js" defer></script></head>
+  <body>
+    <div id="root"></div>
+    <noscript>Activa JavaScript para usar Mi Dinero.</noscript>
+  </body>
+</html>

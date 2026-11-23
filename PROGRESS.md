@@ -48,4 +48,5 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - [x] Compilar la versión de código 2fec1c3 y repetir las siete pruebas de dominio.
 - [x] Subir los quince archivos de distribución a la raíz de la rama `gh-pages` (commit `0ba6be5`) y comprobar el commit remoto.
 - [x] Preparar y verificar un ZIP para carga directa en Cloudflare Pages.
+- [x] Integrar el código de `mi-dinero` y la distribución de `gh-pages` en `main`. Comprobar que `docs/` coincide con la compilación y que abre el resumen y el formulario sin conexión bajo `/gastos/`.
 - [ ] Confirmar la activación del alojamiento y abrir la URL pública por HTTPS. La política de red del entorno bloqueó las consultas a la API de GitHub y al dominio de Pages.
