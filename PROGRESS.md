@@ -70,3 +70,9 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - El formulario destaca las fechas de otro mes, permite cambiar la fecha a hoy y pide confirmación antes de descartar cambios.
 - Se pueden duplicar movimientos guardados para revisarlos con la fecha de hoy antes de guardar la copia.
 - Las copias muestran la última fecha de exportación y permiten compartir el JSON cuando el navegador lo admite. La restauración muestra el periodo de la copia y ofrece descargar el historial actual antes de reemplazarlo.
+
+## Pantalla de arranque y balance
+
+- El balance ajusta el tamaño de la cifra al espacio de la tarjeta para mantener el importe y el símbolo del euro en una línea.
+- La pantalla inicial muestra el icono de Mi Dinero y el crédito a diegogonzalez7 durante la carga del historial.
+- La pantalla inicial se desvanece y las vistas principales aparecen con una transición breve que respeta el ajuste de movimiento reducido.

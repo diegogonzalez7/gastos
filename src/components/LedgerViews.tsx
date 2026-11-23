@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Wallet, X,
 } from 'lucide-react'
@@ -25,12 +25,35 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
 }
 
 export function Balance({ totals }: { totals: Summary }) {
+  const amount = money(totals.balance)
+  const amountBox = useRef<HTMLDivElement>(null)
+  const amountMeasure = useRef<HTMLSpanElement>(null)
+
+  useLayoutEffect(() => {
+    const box = amountBox.current!
+    const measure = amountMeasure.current!
+    function fit() {
+      const naturalWidth = measure.getBoundingClientRect().width
+      if (!naturalWidth || !box.clientWidth) return
+      const scale = Math.min(1, (box.clientWidth - 1) / naturalWidth)
+      box.style.setProperty('--balance-scale', String(scale))
+    }
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(box)
+    observer.observe(measure)
+    return () => observer.disconnect()
+  }, [amount])
+
   return <section className="balance-card" aria-label="Resumen financiero del mes">
     <div className="hero-pattern" aria-hidden="true" />
     <img className="hero-wallet" src={import.meta.env.BASE_URL + 'cartera.webp'} alt="" />
     <div className="balance-content">
       <div className="balance-label"><Wallet size={17} />Balance del mes</div>
-      <div className={'balance-amount money' + (Math.abs(totals.balance) >= 100_000_000 ? ' long-amount' : '')}>{money(totals.balance)}</div>
+      <div ref={amountBox} className="balance-amount">
+        <span ref={amountMeasure} className="balance-measure money" aria-hidden="true">{amount}</span>
+        <span className="balance-value money">{amount}</span>
+      </div>
       <div className="balance-metrics">
         <div className="hero-metric"><span className="metric-icon income"><ArrowDownLeft size={19} /></span>
           <span><small>Ingresos</small><strong className="money">{money(totals.income)}</strong></span></div>

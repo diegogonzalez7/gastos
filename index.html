@@ -10,6 +10,27 @@
     <link rel="icon" type="image/png" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch.png" />
     <title>Mi Dinero</title>
+    <style>
+      .startup {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: grid;
+        place-items: center;
+        background: #f6f8f6;
+        color: #182d2b;
+        text-align: center;
+        font-family: system-ui, sans-serif;
+        transition: opacity 180ms ease-out, visibility 180ms;
+      }
+      :root[data-theme="dark"] .startup { background: #111b1a; color: #edf4ef; }
+      :root[data-app-ready] .startup { opacity: 0; visibility: hidden; pointer-events: none; }
+      .startup img { display: block; margin: 0 auto 16px; border-radius: 20px; }
+      .startup strong { display: block; font-size: 28px; letter-spacing: -.04em; }
+      .startup small { display: block; margin-top: 8px; font-size: 13px; opacity: .75; }
+      @media (prefers-reduced-motion: reduce) { .startup { transition: none; } }
+    </style>
+    <noscript><style>.startup { display: none; }</style></noscript>
     <script>
       try {
         var choice = localStorage.getItem('mi-dinero:theme')
@@ -18,6 +39,13 @@
     </script>
   </head>
   <body>
+    <div class="startup" role="status" aria-label="Cargando Mi Dinero">
+      <div>
+        <img src="./icons/icon-192.png" alt="" width="76" height="76" />
+        <strong>Mi Dinero</strong>
+        <small>Powered by diegogonzalez7</small>
+      </div>
+    </div>
     <div id="root"></div>
     <noscript>Activa JavaScript para usar Mi Dinero.</noscript>
     <script type="module" src="/src/main.tsx"></script>

@@ -293,6 +293,62 @@ test('actualizar la app conserva la base de datos anterior', async ({ browser, p
   } finally { await fresh.close() }
 })
 
+test('el balance de cuatro cifras y los importes largos caben en una línea', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await add(page, 'Ingreso de prueba', '1179,88', '2026-10-01', 'salary')
+  await balance(page, '1.179,88€')
+  const amount = page.locator('.balance-value')
+  await page.evaluate(() => document.fonts.ready)
+  const fits = () => amount.evaluate(node => {
+    const text = document.createRange()
+    text.selectNodeContents(node)
+    const [line, ...rest] = text.getClientRects()
+    return !!line && rest.length === 0 && line.right <= node.parentElement!.getBoundingClientRect().right
+  })
+  await expect.poll(fits).toBe(true)
+  await page.setViewportSize({ width: 320, height: 700 })
+  await expect.poll(fits).toBe(true)
+  await add(page, 'Importe largo', '999999999,99', '2026-10-02')
+  await balance(page, '-999.998.820,11€')
+  await expect.poll(fits).toBe(true)
+})
+
+test('el arranque muestra el icono y el crédito hasta que el historial está listo', async ({ browser, page }) => {
+  const context = await browser.newContext({ colorScheme: 'dark', reducedMotion: 'reduce', serviceWorkers: 'block' })
+  let loadApp!: () => void
+  const moduleGate = new Promise<void>(resolve => { loadApp = resolve })
+  try {
+    const holder = await context.newPage()
+    await holder.goto(new URL('icons/apple-touch.png', page.url()).href)
+    await holder.evaluate(() => new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('mi-dinero', 1)
+      req.onupgradeneeded = () => req.result.createObjectStore('entries', { keyPath: 'id' })
+      req.onsuccess = () => { Reflect.set(window, 'startupTestDb', req.result); resolve() }
+      req.onerror = () => reject(req.error)
+    }))
+    const tab = await context.newPage()
+    await tab.route('**/assets/index-*.js', async route => {
+      await moduleGate
+      await route.continue()
+    })
+    await tab.goto(page.url(), { waitUntil: 'commit' })
+    const loading = tab.getByRole('status', { name: 'Cargando Mi Dinero' })
+    await expect(loading).toContainText('Powered by diegogonzalez7')
+    await expect(loading).toHaveCSS('background-color', 'rgb(17, 27, 26)')
+    await expect.poll(() => loading.locator('img').evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    loadApp()
+    await expect(tab.locator('.app-shell')).toHaveAttribute('inert', '')
+    await expect(loading).toBeVisible()
+    await holder.close()
+    await expect(loading).toBeHidden()
+    await expect(tab.getByRole('button', { name: 'Nuevo movimiento' })).toBeEnabled()
+    await expect(tab.locator('.page-content')).toHaveCSS('animation-name', 'none')
+  } finally {
+    loadApp()
+    await context.close()
+  }
+})
+
 test('categorías solicitadas, teclado y movimientos de versiones anteriores', async ({ page }) => {
   await page.getByRole('button', { name: 'Nuevo movimiento' }).click()
   const dialog = page.getByRole('dialog')

@@ -74,6 +74,9 @@ export default function App() {
   }, [])
   useEffect(() => { void reload(); return watchEntries(reload) }, [reload])
   useEffect(() => {
+    document.documentElement.toggleAttribute('data-app-ready', loadState !== 'loading')
+  }, [loadState])
+  useEffect(() => {
     const navigate = () => { setPage(pageFromHash()); window.scrollTo(0, 0) }
     window.addEventListener('hashchange', navigate)
     return () => window.removeEventListener('hashchange', navigate)
@@ -138,7 +141,7 @@ export default function App() {
   const addButton = (mobile: boolean) => <button className={'primary new-button ' + (mobile ? 'mobile-new' : 'desktop-new')}
     aria-label="Nuevo movimiento" onClick={() => add()} disabled={loadState !== 'ready'}><Plus size={19} /><span>{mobile ? 'Nuevo' : 'Nuevo movimiento'}</span></button>
 
-  return <div className="app-shell">
+  return <div className="app-shell" inert={loadState === 'loading'}>
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>Saltar al contenido</a>
     <aside className="sidebar">
       <a href="#resumen" className="brand-link" aria-label="Mi Dinero, resumen"><Brand /></a>
@@ -157,13 +160,15 @@ export default function App() {
           <div className="header-actions"><MonthControl month={month} allMonths={wholeHistory} allowAll={page === 'movimientos'}
             onChange={(next, all = false) => { setMonth(next); setAllMonths(all) }} />{addButton(false)}</div>
         </header>
-        {loadState === 'loading' ? <p role="status">Leyendo tu historial…</p> : loadState === 'error'
+        {loadState === 'error'
           ? <div className="storage-error" role="alert"><CircleAlert size={23} /><p>{loadError}</p><button className="secondary" onClick={reload}>Reintentar</button></div>
-          : page === 'resumen' ? <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={monthEntries} totals={totals} onAdd={add} onEdit={edit}
-            onHistory={showHistory} onCategories={() => goTo('categorias')} />
-          : page === 'movimientos' ? <History entries={wholeHistory ? entries : monthEntries} category={category} onClearCategory={() => setCategory(null)}
-            onEdit={edit} onAdd={add} />
-          : <CategoryView totals={totals} onHistory={showHistory} onAdd={add} />}
+          : loadState === 'ready' && <div key={page} className="page-content">
+            {page === 'resumen' ? <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={monthEntries} totals={totals} onAdd={add} onEdit={edit}
+              onHistory={showHistory} onCategories={() => goTo('categorias')} />
+            : page === 'movimientos' ? <History entries={wholeHistory ? entries : monthEntries} category={category} onClearCategory={() => setCategory(null)}
+              onEdit={edit} onAdd={add} />
+            : <CategoryView totals={totals} onHistory={showHistory} onAdd={add} />}
+          </div>}
       </div>
     </main>
     <nav className="mobile-nav" aria-label="Navegación principal">{navLinks(true)}
