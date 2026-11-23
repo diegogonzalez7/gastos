@@ -39,4 +39,6 @@ Los cambios se agrupan en commits por fase. La publicación de la web requiere a
 
 - [x] Añadir las categorías del Excel y permitir movimientos fechados con concepto opcional.
 - [x] Incorporar el saldo inicial, el acumulado mensual y su copia de seguridad.
-- [ ] Verificar la actualización y facilitar la instalación desde Safari.
+- [x] Verificar la actualización y facilitar la instalación desde Safari.
+
+Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la compilación de producción. Se comprobó la migración de una base anterior, el registro sin concepto, el arrastre en meses vacíos y la recuperación del saldo inicial desde una copia. El paquete incluye el icono de iPhone de 180 × 180, los metadatos de iOS y el manifiesto en modo independiente. Las instrucciones de instalación están en el menú Más.
