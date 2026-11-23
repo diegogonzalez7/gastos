@@ -34,6 +34,26 @@ Para recuperar el historial, pulsa **Elegir archivo** y revisa el número de mov
 
 Cada origen web, perfil del navegador o dispositivo puede tener su propio almacén. Exporta una copia antes de cambiar de móvil, dominio o navegador, o de borrar los datos del sitio. Puedes usarla en la app instalada si esta abre un historial vacío.
 
+Para pasar la copia entre el iPhone y el ordenador, usa una carpeta en iCloud Drive. En el iPhone, elige **Compartir copia → Guardar en Archivos → iCloud Drive**. En el ordenador puedes elegir ese JSON en iCloud Drive o descargarlo desde iCloud.com. Para llevarla del ordenador al iPhone, guarda el JSON del ordenador en esa carpeta y selecciónalo desde **Elegir archivo** en el móvil. Si tienes un Mac, también puedes enviar el archivo con AirDrop. La transferencia es manual y la restauración reemplaza los datos de la copia en el dispositivo de destino.
+
+## Recordatorios
+
+Abre **Más → Recordatorios** en el móvil o **Recordatorios** en la barra lateral del ordenador. Crea un pago, elige la fecha y la hora y guarda. Desde el recordatorio puedes editarlo, marcarlo como pagado o eliminarlo. Los recordatorios nuevos se incluyen en el JSON y las copias antiguas conservan los recordatorios del dispositivo.
+
+Para recibir el aviso con Mi Dinero cerrada, programa el aviso en el dispositivo desde el recordatorio guardado.
+
+- **Calendario.** Usa **Descargar cita** o **Compartir cita**, si el navegador admite compartir ese archivo. Importa el archivo `.ics` en tu calendario y verifica que la cita tiene un aviso a la hora de inicio. Si el iPhone no permite importar el archivo directamente, usa el atajo siguiente.
+- **Recordatorios de Apple.** Configura una vez un atajo llamado **Pago de Mi Dinero** en la app Atajos. Después, en Mi Dinero pulsa **Usar Recordatorios de Apple → Abrir atajo**.
+
+Para configurar el atajo en el iPhone:
+
+1. Crea un atajo con el nombre **Pago de Mi Dinero** y añade **Obtener diccionario de la entrada**. Usa **Entrada del atajo** como entrada.
+2. Añade dos acciones **Obtener valor del diccionario**, ambas apuntando al primer diccionario. Obtén las claves `titulo` y `fecha`.
+3. Añade **Obtener fechas de la entrada** y selecciona el valor de `fecha`. Mi Dinero proporciona la fecha con su zona horaria.
+4. Añade **Añadir nuevo recordatorio**. Usa el valor de `titulo` como título, elige un aviso por hora y usa la fecha que devolvió el paso anterior.
+
+El calendario o Recordatorios de Apple se encargan de la notificación tras guardar el aviso allí. Si cambias un pago, lo marcas como pagado o lo eliminas en Mi Dinero, actualiza también el aviso que ya hayas añadido en la otra app.
+
 ## Probar la versión instalable
 
 ```sh

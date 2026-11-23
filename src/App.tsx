@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Archive, Check, ChevronRight, CircleAlert, Database, Ellipsis, LayoutDashboard,
+  Archive, Bell, Check, ChevronRight, CircleAlert, Database, Ellipsis, LayoutDashboard,
   List, MonitorSmartphone, Moon, PieChart, Plus, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
@@ -13,6 +13,8 @@ import { MonthControl } from './components/Calendar'
 import { OpeningBalance } from './components/OpeningBalance'
 import { Editor, type EditorDraft } from './components/Editor'
 import { CategoryView, Dashboard, History } from './components/LedgerViews'
+import { Reminders } from './components/Reminders'
+import type { Reminder } from './reminders'
 
 const pages = {
   resumen: { label: 'Resumen', icon: LayoutDashboard },
@@ -56,10 +58,11 @@ export default function App() {
   const [openingCents, setOpeningCents] = useState(0)
   const [editingOpening, setEditingOpening] = useState<number | null>(null)
   const [entries, setEntries] = useState<Entry[]>([])
+  const [reminders, setReminders] = useState<Reminder[]>([])
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState('')
   const [editor, setEditor] = useState<EditorDraft | null>(null)
-  const [utility, setUtility] = useState<'more' | 'backup' | null>(null)
+  const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | null>(null)
   const [toast, setToast] = useState<{ label: string } | null>(null)
   const sequence = useRef(0)
 
@@ -67,7 +70,12 @@ export default function App() {
     const order = ++sequence.current
     try {
       const ledger = await readLedger()
-      if (order === sequence.current) { setOpeningCents(ledger.openingCents); setEntries(latestFirst(ledger.entries)); setLoadState('ready') }
+      if (order === sequence.current) {
+        setOpeningCents(ledger.openingCents)
+        setEntries(latestFirst(ledger.entries))
+        setReminders(ledger.reminders)
+        setLoadState('ready')
+      }
     } catch (err) {
       if (order === sequence.current) { setLoadState('error'); setLoadError(storageMessage(err)) }
     }
@@ -147,6 +155,7 @@ export default function App() {
       <a href="#resumen" className="brand-link" aria-label="Mi Dinero, resumen"><Brand /></a>
       <nav className="side-navigation" aria-label="Navegación principal">{navLinks(false)}</nav>
       <div className="sidebar-bottom">
+        <button className="nav-item backup-nav" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={19} />Recordatorios</button>
         <button className="nav-item backup-nav" onClick={() => setUtility('backup')}><Archive size={19} />Copias de seguridad</button>
         <div className="side-settings"><span className="settings-label">Apariencia</span>{themeControl}</div>
         <div className="local-status"><span />Datos en este dispositivo</div>
@@ -178,6 +187,7 @@ export default function App() {
     {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} onClose={() => setEditor(null)}
       onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} />}
     {utility === 'more' && <Modal title="Más opciones" onClose={() => setUtility(null)}>
+      <button className="more-backup more-reminders" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={20} />Recordatorios<ChevronRight size={17} /></button>
       <button className="more-backup" onClick={() => setUtility('backup')}><Archive size={20} />Copias de seguridad<ChevronRight size={17} /></button>
       <details className="iphone-install"><summary>Instalar en la pantalla de inicio del iPhone</summary>
         <p>Abre Mi Dinero en Safari mediante HTTPS. Pulsa Compartir, elige Añadir a la pantalla de inicio y confirma con Añadir. Si aparece Abrir como app web, déjalo activado.</p>
@@ -185,7 +195,8 @@ export default function App() {
       <div className="more-theme"><h3>Apariencia</h3>{themeControl}</div>
       <p className="local-note"><Database size={17} />Tus datos se guardan en este dispositivo.</p>
     </Modal>}
-    {utility === 'backup' && <Backups ledger={loadState === 'ready' ? { entries, openingCents } : null} onClose={() => setUtility(null)}
+    {utility === 'reminders' && <Reminders reminders={reminders} onClose={() => setUtility(null)} onChange={reload} />}
+    {utility === 'backup' && <Backups ledger={loadState === 'ready' ? { entries, openingCents, reminders } : null} onClose={() => setUtility(null)}
       onRestored={() => { setUtility(null); void reload(); notify('Copia restaurada') }} />}
     {toast && <div className="toast" role="status"><Check size={17} />{toast.label}<button aria-label="Ocultar aviso" onClick={() => setToast(null)}><X size={14} /></button></div>}
   </div>

@@ -1,3 +1,5 @@
+import { readReminders, type Reminder } from './reminders.ts'
+
 export type Kind = 'expense' | 'income'
 
 export const categories = {
@@ -90,6 +92,7 @@ export function parseOpening(input: string): number | null {
 export interface Ledger {
   entries: Entry[]
   openingCents: number
+  reminders?: Reminder[]
 }
 
 export function accountBalances({ entries, openingCents }: Ledger, month: string) {
@@ -182,8 +185,8 @@ function readEntry(value: unknown): Entry {
   return { id: id.toLowerCase(), kind, cents, category: category as CategoryId, concept: concept.trim(), date, createdAt }
 }
 
-export function makeBackup({ entries: transactions, openingCents }: Ledger) {
-  return { app: 'mi-dinero', version: 2, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions }
+export function makeBackup({ entries: transactions, openingCents, reminders }: Ledger) {
+  return { app: 'mi-dinero', version: 2, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions, reminders }
 }
 
 export function readBackup(text: string): Ledger {
@@ -198,7 +201,8 @@ export function readBackup(text: string): Ledger {
   if (typeof openingCents !== 'number' || !Number.isSafeInteger(openingCents) || Math.abs(openingCents) > MAX_CENTS) {
     throw new Error('La copia contiene un saldo inicial no válido.')
   }
-  return { entries, openingCents }
+  if (data.reminders === undefined) return { entries, openingCents }
+  return { entries, openingCents, reminders: readReminders(data.reminders) }
 }
 
 export function equalEntry(a: Entry | undefined, b: Entry) {

@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from 'react'
 import { Download, FileCheck2, FolderOpen, HardDrive, Share2, Upload } from 'lucide-react'
+import { downloadFile } from '../files'
 import { calendarDay, dateLabel, makeBackup, monthLabel, readBackup, money, validDay, type Ledger } from '../ledger'
 import { readLedger, restoreLedger, storageMessage } from '../storage'
 import { Modal } from './ui'
@@ -56,14 +57,7 @@ export function Backups({ ledger, onClose, onRestored }: {
     setNotice('')
     try {
       const file = backupFile(beforeRestoring && preview ? preview.current : await readLedger(), beforeRestoring)
-      const url = URL.createObjectURL(file)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = file.name
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
+      downloadFile(file)
       recordExport(beforeRestoring ? 'Copia del historial actual preparada para descargar.' : 'Copia preparada para descargar.')
     } catch (err) { setError(storageMessage(err)) }
     finally { setBusy(false) }
@@ -116,8 +110,9 @@ export function Backups({ ledger, onClose, onRestored }: {
         Al restaurarla se reemplazará todo el historial de este dispositivo, que ahora contiene {preview.current.entries.length}.</p>
       {preview.months && <p>Meses incluidos: <strong>{preview.months}</strong>.</p>}
       <p>Saldo inicial que se restaurará: <strong className="money">{money(preview.ledger.openingCents)}</strong>.</p>
+      {preview.ledger.reminders && <p>Recordatorios que se restaurarán: <strong>{preview.ledger.reminders.length}</strong>.</p>}
       {preview.ledger.entries.length === 0 && <p className="form-error">Esta copia dejará tu historial vacío.</p>}
-      {(preview.current.entries.length > 0 || preview.current.openingCents !== 0) &&
+      {(preview.current.entries.length > 0 || preview.current.openingCents !== 0 || !!preview.current.reminders?.length) &&
         <button className="secondary save-before-restore" disabled={busy} onClick={() => download(true)}>
           <Download size={16} />Descargar copia del historial actual
         </button>}
@@ -128,7 +123,7 @@ export function Backups({ ledger, onClose, onRestored }: {
     </div> : <div className="backup-options">
       <p className="local-note"><HardDrive size={19} />Tus movimientos se guardan en este dispositivo. Conserva una copia para recuperarlos o llevarlos a otro móvil.</p>
       <div className="backup-option"><span className="utility-icon"><Download size={21} /></span>
-        <div><h3>Exportar copia</h3><p>Descarga los movimientos de todos los meses en un archivo JSON.</p>
+        <div><h3>Exportar copia</h3><p>Guarda tus movimientos, saldo inicial y recordatorios en un archivo JSON. Puedes usar iCloud Drive para abrirlo en otro dispositivo.</p>
           {lastExport && <p>Última exportación: <time dateTime={lastExport}>{dateLabel(lastExport, { dateStyle: 'long' })}</time></p>}
           <div className="backup-actions">
             <button className="secondary" disabled={busy} onClick={() => download()}><Download size={16} />Descargar copia</button>

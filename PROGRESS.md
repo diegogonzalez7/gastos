@@ -76,3 +76,10 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - El balance ajusta el tamaño de la cifra al espacio de la tarjeta para mantener el importe y el símbolo del euro en una línea.
 - La pantalla inicial muestra el icono de Mi Dinero y el crédito a diegogonzalez7 durante la carga del historial.
 - La pantalla inicial se desvanece y las vistas principales aparecen con una transición breve que respeta el ajuste de movimiento reducido.
+
+## Recordatorios de pago y traslado de copias
+
+- El panel de Recordatorios permite elegir qué pagar y cuándo, editar el aviso y marcar el pago como resuelto.
+- Cada recordatorio genera una cita con alerta a la hora indicada. En iPhone también se puede enviar al atajo de Recordatorios de Apple.
+- Las copias JSON guardan los recordatorios junto a los movimientos. Las copias creadas antes de esta función mantienen los recordatorios que ya existen en el dispositivo.
+- La guía describe cómo mover el mismo JSON entre iPhone y ordenador con iCloud Drive o AirDrop.

@@ -489,3 +489,70 @@ test('Compartir entrega la copia JSON al sistema y anota la fecha', async ({ pag
     backup: { version: 2, transactions: [{ concept: 'Copia compartida', cents: 120 }] },
   })
 })
+
+async function openReminders(page: Page) {
+  const more = page.getByRole('button', { name: 'Más', exact: true })
+  if (await more.isVisible()) await more.click()
+  await page.getByRole('button', { name: 'Recordatorios', exact: true }).click()
+  return page.getByRole('dialog')
+}
+
+test('programar un pago genera una cita con alerta y permite marcarlo como pagado', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-23T12:00:00+01:00'))
+  const dialog = await openReminders(page)
+  await dialog.getByRole('button', { name: 'Nuevo recordatorio' }).click()
+  await dialog.getByLabel('Qué quieres pagar').fill('Seguro')
+  await dialog.getByLabel('Fecha y hora del aviso').fill('2026-11-22T09:30')
+  await dialog.getByRole('button', { name: 'Guardar recordatorio' }).click()
+  await expect(dialog.getByRole('alert')).toContainText('fecha y hora futuras')
+  await dialog.getByLabel('Fecha y hora del aviso').fill('2026-11-25T09:30')
+  await dialog.getByRole('button', { name: 'Guardar recordatorio' }).click()
+  await expect(dialog.getByText('Recordatorio guardado.')).toBeVisible()
+  const download = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Descargar cita' }).click()
+  const file = await download
+  expect(file.suggestedFilename()).toMatch(/\.ics$/)
+  const calendar = await readFile((await file.path())!, 'utf8')
+  expect(calendar).toContain('DTSTART:20261125T083000Z')
+  expect(calendar).toContain('TRIGGER:PT0M')
+  await dialog.getByText('Usar Recordatorios de Apple').click()
+  const shortcutUrl = new URL((await dialog.getByRole('link', { name: 'Abrir atajo' }).getAttribute('href'))!)
+  expect(JSON.parse(shortcutUrl.searchParams.get('text')!)).toEqual({ titulo: 'Pagar Seguro', fecha: '2026-11-25T08:30:00.000Z' })
+
+  await page.reload()
+  await openReminders(page)
+  await dialog.getByRole('button', { name: /Seguro/ }).click()
+  await dialog.getByRole('button', { name: 'Marcar como pagado' }).click()
+  await expect(dialog.getByRole('button', { name: 'Marcar como pendiente' })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Cerrar' }).click()
+  await expect(dialog.getByRole('button', { name: /Seguro/ })).toContainText('Pagado')
+  await dialog.getByRole('button', { name: /Seguro/ }).click()
+  await dialog.getByRole('button', { name: 'Eliminar recordatorio' }).click()
+  await dialog.getByRole('button', { name: 'Sí, eliminar' }).click()
+  await expect(dialog.getByRole('button', { name: /Seguro/ })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Cerrar' }).click()
+  await balance(page, '0,00€')
+})
+
+test('recuperar una copia antigua conserva los recordatorios guardados', async ({ page }) => {
+  await backups(page)
+  const incoming = { app: 'mi-dinero', version: 2, currency: 'EUR', openingCents: 2000, transactions: [] }
+  const reminder = { id: '11111111-1111-4111-8111-111111111111', title: 'Alquiler', at: Date.UTC(2030, 0, 12, 8), paid: false }
+  async function restore(data: object, showCount = false) {
+    await page.getByLabel('Archivo de copia').setInputFiles({
+      name: 'copia.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(data)),
+    })
+    if (showCount) await expect(page.getByText('Recordatorios que se restaurarán:')).toBeVisible()
+    await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  }
+  await restore({ ...incoming, reminders: [reminder] }, true)
+  await backups(page)
+  await restore(incoming)
+  await backups(page)
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Descargar copia', exact: true }).click()
+  const file = await download
+  const backup = JSON.parse(await readFile((await file.path())!, 'utf8'))
+  expect(backup.reminders).toEqual([reminder])
+})

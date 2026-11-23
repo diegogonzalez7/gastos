@@ -1,18 +1,21 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import { equalEntry, newEntryId, type Entry, type Ledger } from './ledger'
+import { sameReminder, type Reminder } from './reminders'
 
 interface LedgerDB extends DBSchema {
   settings: { key: 'openingCents', value: number }
   entries: { key: string, value: Entry }
+  reminders: { key: string, value: Reminder }
 }
 
 let connection: Promise<IDBPDatabase<LedgerDB>> | undefined
 function database() {
   if (!connection) {
-    connection = openDB<LedgerDB>('mi-dinero', 2, {
+    connection = openDB<LedgerDB>('mi-dinero', 3, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) db.createObjectStore('entries', { keyPath: 'id' })
         if (oldVersion < 2) db.createObjectStore('settings')
+        if (oldVersion < 3) db.createObjectStore('reminders', { keyPath: 'id' })
       },
       blocking(_old, _new, event) {
         (event.target as IDBDatabase).close()
@@ -24,12 +27,12 @@ function database() {
   return connection
 }
 
-export async function readLedger(): Promise<Ledger> {
-  const tx = (await database()).transaction(['entries', 'settings'])
-  const [entries, opening] = await Promise.all([
-    tx.objectStore('entries').getAll(), tx.objectStore('settings').get('openingCents'),
+export async function readLedger(): Promise<Ledger & { reminders: Reminder[] }> {
+  const tx = (await database()).transaction(['entries', 'settings', 'reminders'])
+  const [entries, opening, reminders] = await Promise.all([
+    tx.objectStore('entries').getAll(), tx.objectStore('settings').get('openingCents'), tx.objectStore('reminders').getAll(),
   ])
-  return { entries, openingCents: opening ?? 0 }
+  return { entries, openingCents: opening ?? 0, reminders }
 }
 
 export async function saveOpening(openingCents: number, original: number) {
@@ -85,16 +88,45 @@ export async function changeEntry(original: Entry, replacement: Entry | null) {
   notifyReaders()
 }
 
+export async function saveReminder(reminder: Reminder) {
+  await (await database()).add('reminders', reminder)
+  notifyReaders()
+}
+
+export async function changeReminder(original: Reminder, replacement: Reminder | null) {
+  const tx = (await database()).transaction('reminders', 'readwrite')
+  try {
+    if (!sameReminder(await tx.store.get(original.id), original)) throw new ChangedDataError()
+    if (replacement) await tx.store.put(replacement)
+    else await tx.store.delete(original.id)
+    await tx.done
+  } catch (error) {
+    await tx.done.catch(() => {})
+    throw error
+  }
+  notifyReaders()
+}
+
 export async function restoreLedger(ledger: Ledger, expected: Ledger) {
-  const tx = (await database()).transaction(['entries', 'settings'], 'readwrite')
+  const tx = (await database()).transaction(['entries', 'settings', 'reminders'], 'readwrite')
   const store = tx.objectStore('entries')
   const settings = tx.objectStore('settings')
+  const reminders = tx.objectStore('reminders')
   try {
     const current = await store.getAll()
     if (((await settings.get('openingCents')) ?? 0) !== expected.openingCents) throw new ChangedDataError()
     const byId = new Map(expected.entries.map(entry => [entry.id, entry]))
     if (current.length !== expected.entries.length || current.some(entry => !equalEntry(byId.get(entry.id), entry))) {
       throw new ChangedDataError()
+    }
+    if (ledger.reminders) {
+      const existing = await reminders.getAll()
+      const byId = new Map(expected.reminders?.map(reminder => [reminder.id, reminder]))
+      if (existing.length !== byId.size || existing.some(reminder => !sameReminder(byId.get(reminder.id), reminder))) {
+        throw new ChangedDataError()
+      }
+      await reminders.clear()
+      await Promise.all(ledger.reminders.map(reminder => reminders.add(reminder)))
     }
     await store.clear()
     await settings.put(ledger.openingCents, 'openingCents')
