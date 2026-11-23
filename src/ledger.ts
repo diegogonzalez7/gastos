@@ -29,6 +29,16 @@ export interface Entry {
   createdAt: number
 }
 
+export function newEntryId(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  // getRandomValues also works on a phone connected to an HTTP development server.
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-')
+}
+
 export const MAX_CENTS = 99_999_999_999
 export const MAX_CONCEPT = 120
 export const currency = new Intl.NumberFormat('es-ES', {
@@ -120,7 +130,7 @@ function readEntry(value: unknown): Entry {
       || !validDay(date) || typeof createdAt !== 'number' || !Number.isSafeInteger(createdAt) || createdAt < 0) {
     throw new Error('La copia contiene un movimiento con datos no válidos.')
   }
-  return { id, kind, cents, category: category as CategoryId, concept: concept.trim(), date, createdAt }
+  return { id: id.toLowerCase(), kind, cents, category: category as CategoryId, concept: concept.trim(), date, createdAt }
 }
 
 export function makeBackup(transactions: Entry[]) {

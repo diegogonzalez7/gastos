@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { equalEntry, type Entry } from './ledger'
+import { equalEntry, newEntryId, type Entry } from './ledger'
 
 interface LedgerDB extends DBSchema {
   entries: { key: string, value: Entry }
@@ -30,7 +30,7 @@ const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel(ch
 function notifyReaders() {
   if (channel) channel.postMessage('change')
   else {
-    try { localStorage.setItem(changeKey, crypto.randomUUID()) } catch { /* Refresh also runs when a tab becomes visible. */ }
+    try { localStorage.setItem(changeKey, newEntryId()) } catch { /* Refresh also runs when a tab becomes visible. */ }
   }
 }
 

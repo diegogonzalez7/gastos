@@ -170,7 +170,7 @@ export default function App() {
       <div className="more-theme"><h3>Apariencia</h3>{themeControl}</div>
       <p className="local-note"><Database size={17} />Tus datos se guardan en este dispositivo.</p>
     </Modal>}
-    {utility === 'backup' && <Backups onClose={() => setUtility(null)} notify={notify}
+    {utility === 'backup' && <Backups onClose={() => setUtility(null)}
       onRestored={() => { setUtility(null); void reload(); notify('Copia restaurada') }} />}
     {toast && <div className="toast" role="status"><Check size={17} />{toast.label}<button aria-label="Ocultar aviso" onClick={() => setToast(null)}><X size={14} /></button></div>}
   </div>

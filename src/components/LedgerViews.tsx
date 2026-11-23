@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Wallet, X,
 } from 'lucide-react'
@@ -10,12 +10,14 @@ import { CategoryBadge, EmptyState } from './ui'
 
 export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, onEdit: (entry: Entry) => void, showDate?: boolean }) {
   const incoming = entry.kind === 'income'
-  return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + entry.concept}>
+  const description = useId()
+  return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + entry.concept}
+    aria-describedby={description + '-category ' + description + '-amount'}>
     <CategoryBadge category={entry.category} />
-    <span className="entry-info"><strong>{entry.concept}</strong><small>
+    <span className="entry-info"><strong>{entry.concept}</strong><small id={description + '-category'}>
       {categories[entry.category].name}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
     </small></span>
-    <span className={'entry-value' + (incoming ? ' positive' : '')}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
+    <span className={'entry-value' + (incoming ? ' positive' : '')} id={description + '-amount'}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
     <ChevronRight className="entry-chevron" size={15} />
   </button>
 }

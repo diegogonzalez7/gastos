@@ -4,16 +4,18 @@ import { calendarDay, makeBackup, readBackup, type Entry } from '../ledger'
 import { allEntries, restoreEntries, storageMessage } from '../storage'
 import { Modal } from './ui'
 
-export function Backups({ onClose, onRestored, notify }: {
-  onClose: () => void, onRestored: () => void, notify: (message: string) => void,
+export function Backups({ onClose, onRestored }: {
+  onClose: () => void, onRestored: () => void,
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [preview, setPreview] = useState<{ file: string, entries: Entry[], current: Entry[] } | null>(null)
 
   async function download() {
     setBusy(true)
     setError('')
+    setNotice('')
     try {
       const backup = makeBackup(await allEntries())
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
@@ -25,7 +27,7 @@ export function Backups({ onClose, onRestored, notify }: {
       link.click()
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
-      notify('Copia preparada para descargar')
+      setNotice('Copia preparada para descargar.')
     } catch (err) { setError(storageMessage(err)) }
     finally { setBusy(false) }
   }
@@ -36,6 +38,7 @@ export function Backups({ onClose, onRestored, notify }: {
     if (!file) return
     setBusy(true)
     setError('')
+    setNotice('')
     try {
       let entries: Entry[]
       try { entries = readBackup(await file.text()) }
@@ -76,5 +79,6 @@ export function Backups({ onClose, onRestored, notify }: {
       </div>
     </div>}
     {error && <p className="form-error" role="alert">{error}</p>}
+    {notice && <p className="export-notice" role="status">{notice}</p>}
   </Modal>
 }

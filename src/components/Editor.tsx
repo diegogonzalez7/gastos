@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react'
-import { categories, categoryIds, MAX_CONCEPT, money, parseAmount, validDay, type CategoryId, type Entry, type Kind } from '../ledger'
+import { categories, categoryIds, MAX_CONCEPT, money, newEntryId, parseAmount, validDay, type CategoryId, type Entry, type Kind } from '../ledger'
 import { changeEntry, saveEntry, storageMessage } from '../storage'
 import { Modal } from './ui'
 
@@ -38,7 +38,7 @@ export function Editor({ draft, onClose, onSaved }: {
     setError('')
     try {
       const entry: Entry = {
-        id: old?.id ?? crypto.randomUUID(), createdAt: old?.createdAt ?? Date.now(),
+        id: old?.id ?? newEntryId(), createdAt: old?.createdAt ?? Date.now(),
         kind, category, concept: concept.trim(), date, cents,
       }
       if (old) await changeEntry(old, entry)
@@ -70,7 +70,7 @@ export function Editor({ draft, onClose, onSaved }: {
       </div>
       <label className="field">Importe
         <span className="amount-input"><input name="amount" type="text" inputMode="decimal" placeholder="0,00" aria-label="Importe"
-          maxLength={20} required autoComplete="off" autoFocus value={amount} onChange={e => setAmount(e.target.value)} /><span>€</span></span>
+          maxLength={20} required autoComplete="off" data-initial-focus value={amount} onChange={e => setAmount(e.target.value)} /><span>€</span></span>
       </label>
       <label className="field">Concepto<input name="concept" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : 'Ej. Nómina de este mes'}
         maxLength={MAX_CONCEPT} required value={concept} onChange={e => setConcept(e.target.value)} /></label>
