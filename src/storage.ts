@@ -1,15 +1,19 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { equalEntry, newEntryId, type Entry } from './ledger'
+import { equalEntry, newEntryId, type Entry, type Ledger } from './ledger'
 
 interface LedgerDB extends DBSchema {
+  settings: { key: 'openingCents', value: number }
   entries: { key: string, value: Entry }
 }
 
 let connection: Promise<IDBPDatabase<LedgerDB>> | undefined
 function database() {
   if (!connection) {
-    connection = openDB<LedgerDB>('mi-dinero', 1, {
-      upgrade(db) { db.createObjectStore('entries', { keyPath: 'id' }) },
+    connection = openDB<LedgerDB>('mi-dinero', 2, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) db.createObjectStore('entries', { keyPath: 'id' })
+        if (oldVersion < 2) db.createObjectStore('settings')
+      },
       blocking(_old, _new, event) {
         (event.target as IDBDatabase).close()
         connection = undefined
@@ -20,8 +24,19 @@ function database() {
   return connection
 }
 
-export async function allEntries() {
-  return (await database()).getAll('entries')
+export async function readLedger(): Promise<Ledger> {
+  const tx = (await database()).transaction(['entries', 'settings'])
+  const [entries, opening] = await Promise.all([
+    tx.objectStore('entries').getAll(), tx.objectStore('settings').get('openingCents'),
+  ])
+  return { entries, openingCents: opening ?? 0 }
+}
+
+export async function saveOpening(openingCents: number, original: number) {
+  const tx = (await database()).transaction('settings', 'readwrite')
+  if (((await tx.store.get('openingCents')) ?? 0) !== original) throw new ChangedDataError()
+  await Promise.all([tx.store.put(openingCents, 'openingCents'), tx.done])
+  notifyReaders()
 }
 
 const changeKey = 'mi-dinero:changes'
@@ -70,16 +85,20 @@ export async function changeEntry(original: Entry, replacement: Entry | null) {
   notifyReaders()
 }
 
-export async function restoreEntries(entries: Entry[], expected: Entry[]) {
-  const tx = (await database()).transaction('entries', 'readwrite')
+export async function restoreLedger(ledger: Ledger, expected: Ledger) {
+  const tx = (await database()).transaction(['entries', 'settings'], 'readwrite')
+  const store = tx.objectStore('entries')
+  const settings = tx.objectStore('settings')
   try {
-    const current = await tx.store.getAll()
-    const byId = new Map(expected.map(entry => [entry.id, entry]))
-    if (current.length !== expected.length || current.some(entry => !equalEntry(byId.get(entry.id), entry))) {
+    const current = await store.getAll()
+    if (((await settings.get('openingCents')) ?? 0) !== expected.openingCents) throw new ChangedDataError()
+    const byId = new Map(expected.entries.map(entry => [entry.id, entry]))
+    if (current.length !== expected.entries.length || current.some(entry => !equalEntry(byId.get(entry.id), entry))) {
       throw new ChangedDataError()
     }
-    await tx.store.clear()
-    await Promise.all([...entries.map(entry => tx.store.add(entry)), tx.done])
+    await store.clear()
+    await settings.put(ledger.openingCents, 'openingCents')
+    await Promise.all([...ledger.entries.map(entry => store.add(entry)), tx.done])
   } catch (error) {
     try { tx.abort() } catch { /* The failing request may already have aborted the transaction. */ }
     await tx.done.catch(() => {})

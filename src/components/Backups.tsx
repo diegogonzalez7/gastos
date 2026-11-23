@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 import { Download, FileCheck2, FolderOpen, HardDrive, Upload } from 'lucide-react'
-import { calendarDay, makeBackup, readBackup, type Entry } from '../ledger'
-import { allEntries, restoreEntries, storageMessage } from '../storage'
+import { calendarDay, makeBackup, readBackup, money, type Ledger } from '../ledger'
+import { readLedger, restoreLedger, storageMessage } from '../storage'
 import { Modal } from './ui'
 
 export function Backups({ onClose, onRestored }: {
@@ -10,14 +10,14 @@ export function Backups({ onClose, onRestored }: {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [preview, setPreview] = useState<{ file: string, entries: Entry[], current: Entry[] } | null>(null)
+  const [preview, setPreview] = useState<{ file: string, ledger: Ledger, current: Ledger } | null>(null)
 
   async function download() {
     setBusy(true)
     setError('')
     setNotice('')
     try {
-      const backup = makeBackup(await allEntries())
+      const backup = makeBackup(await readLedger())
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -40,10 +40,10 @@ export function Backups({ onClose, onRestored }: {
     setError('')
     setNotice('')
     try {
-      let entries: Entry[]
-      try { entries = readBackup(await file.text()) }
+      let ledger: Ledger
+      try { ledger = readBackup(await file.text()) }
       catch (err) { setError(err instanceof Error ? err.message : 'No se ha podido leer la copia.'); return }
-      setPreview({ file: file.name, entries, current: await allEntries() })
+      setPreview({ file: file.name, ledger, current: await readLedger() })
     } catch (err) { setError(storageMessage(err)) }
     finally { setBusy(false) }
   }
@@ -52,16 +52,17 @@ export function Backups({ onClose, onRestored }: {
     if (!preview || busy) return
     setBusy(true)
     setError('')
-    try { await restoreEntries(preview.entries, preview.current); onRestored() }
+    try { await restoreLedger(preview.ledger, preview.current); onRestored() }
     catch (err) { setError(storageMessage(err)); setBusy(false) }
   }
 
   return <Modal title={preview ? 'Confirmar restauración' : 'Copias de seguridad'} onClose={onClose} busy={busy}>
     {preview ? <div className="confirm-panel">
       <div className="file-preview"><FileCheck2 size={23} /><strong>{preview.file}</strong></div>
-      <p>La copia contiene <strong>{preview.entries.length} {preview.entries.length === 1 ? 'movimiento' : 'movimientos'}</strong>.
-        Al restaurarla se reemplazará todo el historial de este dispositivo, que ahora contiene {preview.current.length}.</p>
-      {preview.entries.length === 0 && <p className="form-error">Esta copia dejará tu historial vacío.</p>}
+      <p>La copia contiene <strong>{preview.ledger.entries.length} {preview.ledger.entries.length === 1 ? 'movimiento' : 'movimientos'}</strong>.
+        Al restaurarla se reemplazará todo el historial de este dispositivo, que ahora contiene {preview.current.entries.length}.</p>
+      <p>Saldo inicial que se restaurará: <strong>{money(preview.ledger.openingCents)}</strong>.</p>
+      {preview.ledger.entries.length === 0 && <p className="form-error">Esta copia dejará tu historial vacío.</p>}
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={() => { setPreview(null); setError('') }}>Cancelar</button>
         <button className="primary" disabled={busy} onClick={restore}>{busy ? 'Restaurando…' : 'Restaurar copia'}</button>

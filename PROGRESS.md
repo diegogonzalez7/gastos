@@ -38,5 +38,5 @@ Los cambios se agrupan en commits por fase. La publicación de la web requiere a
 ## Seguimiento desde septiembre
 
 - [x] Añadir las categorías del Excel y permitir movimientos fechados con concepto opcional.
-- [ ] Incorporar el saldo inicial, el acumulado mensual y su copia de seguridad.
+- [x] Incorporar el saldo inicial, el acumulado mensual y su copia de seguridad.
 - [ ] Verificar la actualización y facilitar la instalación desde Safari.

@@ -58,13 +58,40 @@ export const currency = new Intl.NumberFormat('es-ES', {
 })
 export const money = (cents: number) => currency.format(cents / 100)
 
-export function parseAmount(input: string): number | null {
+function unsignedCents(input: string): number | null {
   let value = input.trim()
   if (/^\d{1,3}(\.\d{3})+,\d{1,2}$/.test(value)) value = value.replaceAll('.', '')
   if (!/^(?:\d+([.,]\d{1,2})?|[.,]\d{1,2})$/.test(value)) return null
   const [whole, fraction = ''] = value.split(/[.,]/)
   const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'))
-  return Number.isSafeInteger(cents) && cents > 0 && cents <= MAX_CENTS ? cents : null
+  return Number.isSafeInteger(cents) && cents <= MAX_CENTS ? cents : null
+}
+
+export function parseAmount(input: string): number | null {
+  return unsignedCents(input) || null
+}
+
+export function parseOpening(input: string): number | null {
+  const value = input.trim()
+  const negative = value.startsWith('-')
+  const cents = unsignedCents(negative ? value.slice(1) : value)
+  return cents === null ? null : negative ? -cents : cents
+}
+
+export interface Ledger {
+  entries: Entry[]
+  openingCents: number
+}
+
+export function accountBalances({ entries, openingCents }: Ledger, month: string) {
+  let closing = openingCents
+  let total = openingCents
+  for (const entry of entries) {
+    const signed = entry.kind === 'income' ? entry.cents : -entry.cents
+    total += signed
+    if (entry.date.slice(0, 7) <= month) closing += signed
+  }
+  return { closing, total }
 }
 
 export function calendarDay(date = new Date()): string {
@@ -145,19 +172,23 @@ function readEntry(value: unknown): Entry {
   return { id: id.toLowerCase(), kind, cents, category: category as CategoryId, concept: concept.trim(), date, createdAt }
 }
 
-export function makeBackup(transactions: Entry[]) {
-  return { app: 'mi-dinero', version: 1, currency: 'EUR', exportedAt: new Date().toISOString(), transactions }
+export function makeBackup({ entries: transactions, openingCents }: Ledger) {
+  return { app: 'mi-dinero', version: 2, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions }
 }
 
-export function readBackup(text: string): Entry[] {
+export function readBackup(text: string): Ledger {
   let data: unknown
   try { data = JSON.parse(text) } catch { throw new Error('El archivo no contiene JSON válido.') }
   if (!record(data) || data.app !== 'mi-dinero') throw new Error('Selecciona una copia creada con Mi Dinero.')
-  if (data.version !== 1 || data.currency !== 'EUR') throw new Error('La versión o la moneda de esta copia es incompatible.')
+  if ((data.version !== 1 && data.version !== 2) || data.currency !== 'EUR') throw new Error('La versión o la moneda de esta copia es incompatible.')
   if (!Array.isArray(data.transactions)) throw new Error('Falta la lista de movimientos en la copia.')
   const entries = data.transactions.map(readEntry)
   if (new Set(entries.map(entry => entry.id)).size !== entries.length) throw new Error('La copia contiene movimientos duplicados.')
-  return entries
+  const openingCents = data.version === 1 ? 0 : data.openingCents
+  if (typeof openingCents !== 'number' || !Number.isSafeInteger(openingCents) || Math.abs(openingCents) > MAX_CENTS) {
+    throw new Error('La copia contiene un saldo inicial no válido.')
+  }
+  return { entries, openingCents }
 }
 
 export function equalEntry(a: Entry | undefined, b: Entry) {

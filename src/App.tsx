@@ -4,12 +4,13 @@ import {
   List, MonitorSmartphone, Moon, PieChart, Plus, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
-  calendarDay, capitalize, dateLabel, latestFirst, monthly, summarize, type CategoryId, type Entry,
+  accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, summarize, type CategoryId, type Entry,
 } from './ledger'
-import { allEntries, storageMessage, watchEntries } from './storage'
+import { readLedger, storageMessage, watchEntries } from './storage'
 import { Brand, Modal } from './components/ui'
 import { Backups } from './components/Backups'
 import { MonthControl } from './components/Calendar'
+import { OpeningBalance } from './components/OpeningBalance'
 import { Editor, type EditorDraft } from './components/Editor'
 import { CategoryView, Dashboard, History } from './components/LedgerViews'
 
@@ -52,6 +53,8 @@ export default function App() {
   const [allMonths, setAllMonths] = useState(false)
   const [category, setCategory] = useState<CategoryId | null>(null)
   const [theme, setTheme] = useState<Theme>(savedTheme)
+  const [openingCents, setOpeningCents] = useState(0)
+  const [editingOpening, setEditingOpening] = useState<number | null>(null)
   const [entries, setEntries] = useState<Entry[]>([])
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState('')
@@ -63,8 +66,8 @@ export default function App() {
   const reload = useCallback(async () => {
     const order = ++sequence.current
     try {
-      const records = await allEntries()
-      if (order === sequence.current) { setEntries(latestFirst(records)); setLoadState('ready') }
+      const ledger = await readLedger()
+      if (order === sequence.current) { setOpeningCents(ledger.openingCents); setEntries(latestFirst(ledger.entries)); setLoadState('ready') }
     } catch (err) {
       if (order === sequence.current) { setLoadState('error'); setLoadError(storageMessage(err)) }
     }
@@ -97,6 +100,7 @@ export default function App() {
 
   const monthEntries = useMemo(() => monthly(entries, month), [entries, month])
   const totals = useMemo(() => summarize(monthEntries), [monthEntries])
+  const account = useMemo(() => accountBalances({ entries, openingCents }, month), [entries, openingCents, month])
   const wholeHistory = page === 'movimientos' && allMonths
   function notify(label: string) { setToast({ label }) }
   function changeTheme(next: Theme) {
@@ -155,7 +159,7 @@ export default function App() {
         </header>
         {loadState === 'loading' ? <p role="status">Leyendo tu historial…</p> : loadState === 'error'
           ? <div className="storage-error" role="alert"><CircleAlert size={23} /><p>{loadError}</p><button className="secondary" onClick={reload}>Reintentar</button></div>
-          : page === 'resumen' ? <Dashboard entries={monthEntries} totals={totals} onAdd={add} onEdit={edit}
+          : page === 'resumen' ? <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={monthEntries} totals={totals} onAdd={add} onEdit={edit}
             onHistory={showHistory} onCategories={() => goTo('categorias')} />
           : page === 'movimientos' ? <History entries={wholeHistory ? entries : monthEntries} category={category} onClearCategory={() => setCategory(null)}
             onEdit={edit} onAdd={add} />
@@ -164,9 +168,14 @@ export default function App() {
     </main>
     <nav className="mobile-nav" aria-label="Navegación principal">{navLinks(true)}
       <button className="nav-item" onClick={() => setUtility('more')}><Ellipsis size={21} /><span>Más</span></button></nav>
+    {editingOpening !== null && <OpeningBalance original={editingOpening} onClose={() => setEditingOpening(null)}
+      onSaved={() => { setEditingOpening(null); void reload(); notify('Saldo inicial guardado') }} />}
     {editor && <Editor draft={editor} onClose={() => setEditor(null)} onSaved={saved} />}
     {utility === 'more' && <Modal title="Más opciones" onClose={() => setUtility(null)}>
       <button className="more-backup" onClick={() => setUtility('backup')}><Archive size={20} />Copias de seguridad<ChevronRight size={17} /></button>
+      <details className="iphone-install"><summary>Instalar en la pantalla de inicio del iPhone</summary>
+        <p>Abre Mi Dinero en Safari mediante HTTPS. Pulsa Compartir, elige Añadir a la pantalla de inicio y confirma con Añadir. Si aparece Abrir como app web, déjalo activado.</p>
+      </details>
       <div className="more-theme"><h3>Apariencia</h3>{themeControl}</div>
       <p className="local-note"><Database size={17} />Tus datos se guardan en este dispositivo.</p>
     </Modal>}

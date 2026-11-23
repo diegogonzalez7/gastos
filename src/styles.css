@@ -403,3 +403,21 @@ input::placeholder { color: var(--muted); opacity: .85; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+.account-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 8px; }
+.account-strip > * { padding: 8px 14px; min-width: 0; text-align: left; }
+.account-strip > * + * { border-left: 1px solid var(--line); }
+.account-strip small, .account-strip strong { display: block; }
+.account-strip small { color: var(--secondary); font-size: 13px; }
+.account-strip strong { font-size: 18px; overflow-wrap: anywhere; }
+.account-strip button { border-radius: 8px; color: var(--accent); }
+.account-strip button:hover { background: var(--active); }
+.iphone-install { margin: 18px 0; color: var(--secondary); }
+.iphone-install summary { cursor: pointer; font-weight: 600; }
+.iphone-install p { margin-top: 10px; }
+@media (max-width: 520px) {
+  .account-strip { grid-template-columns: 1fr; }
+  .account-strip > * { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .account-strip > * + * { border: 0; border-top: 1px solid var(--line-light); }
+  .account-strip strong { font-size: 15px; }
+}

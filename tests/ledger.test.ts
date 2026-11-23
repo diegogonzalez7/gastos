@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  calendarDay, latestFirst, makeBackup, monthly, parseAmount, readBackup,
+  accountBalances, calendarDay, latestFirst, parseOpening, makeBackup, monthly, parseAmount, readBackup,
   searchText, shiftMonth, summarize, validDay, type Entry,
 } from '../src/ledger.ts'
 
@@ -45,16 +45,41 @@ test('el resumen solo agrega el mes y ordena las categorías por gasto', () => {
 })
 
 test('la copia versionada admite todos los movimientos y también una cartera vacía', () => {
-  for (const entries of [[], [income, expense]]) assert.deepEqual(readBackup(JSON.stringify(makeBackup(entries))), entries)
+  for (const entries of [[], [income, expense]]) {
+    const ledger = { entries, openingCents: -1234 }
+    assert.deepEqual(readBackup(JSON.stringify(makeBackup(ledger))), ledger)
+  }
 })
 
 test('una copia dañada, incompatible o duplicada se rechaza entera', () => {
   for (const patch of [
     { cents: 0 }, { cents: 1.5 }, { cents: 1e15 }, { concept: 9 }, { kind: 'something' },
     { category: 'salary' }, { category: '__proto__' }, { date: '2024-02-31' }, { id: 'x' }, { createdAt: -1 },
-  ]) assert.throws(() => readBackup(JSON.stringify({ ...makeBackup([]), transactions: [income, { ...expense, ...patch }] })))
-  for (const text of ['{', 'null', '{}', JSON.stringify(makeBackup([expense, expense])),
-    JSON.stringify({ ...makeBackup([]), version: 2 }), JSON.stringify({ ...makeBackup([]), currency: 'USD' })]) {
+  ]) assert.throws(() => readBackup(JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), transactions: [income, { ...expense, ...patch }] })))
+  for (const text of ['{', 'null', '{}', JSON.stringify(makeBackup({ entries: [expense, expense], openingCents: 0 })),
+    JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), version: 3 }), JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), currency: 'USD' })]) {
     assert.throws(() => readBackup(text))
+  }
+})
+
+test('el saldo inicial se arrastra una vez, incluso en meses sin movimientos', () => {
+  const ledger = { openingCents: 10000, entries: [
+    { ...expense, date: '2024-09-10' }, { ...income, date: '2024-11-02' },
+  ] }
+  assert.deepEqual(accountBalances(ledger, '2024-08'), { closing: 10000, total: 28795 })
+  assert.deepEqual(accountBalances(ledger, '2024-10'), { closing: 8795, total: 28795 })
+  assert.deepEqual(accountBalances(ledger, '2024-11'), { closing: 28795, total: 28795 })
+  assert.equal(parseOpening('-123,50'), -12350)
+  assert.equal(parseOpening('0'), 0)
+  assert.equal(parseOpening(''), null)
+  assert.equal(parseOpening('-1,234'), null)
+})
+
+test('se restauran las copias anteriores y los conceptos vacíos', () => {
+  const entries = [{ ...expense, concept: '' }]
+  const old = { app: 'mi-dinero', currency: 'EUR', version: 1, transactions: entries }
+  assert.deepEqual(readBackup(JSON.stringify(old)), { entries, openingCents: 0 })
+  for (const openingCents of [undefined, null, '20', 0.5, 1e12]) {
+    assert.throws(() => readBackup(JSON.stringify({ ...old, version: 2, openingCents })))
   }
 })

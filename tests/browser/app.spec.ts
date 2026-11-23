@@ -220,3 +220,60 @@ test('dos ventanas no sobrescriben una edición ya guardada', async ({ page, con
   await second.getByRole('button', { name: 'Cerrar' }).click()
   await balance(second, '-40,00€')
 })
+
+test('el saldo inicial acompaña el historial y se restaura con la copia', async ({ page }) => {
+  const setOpening = async (amount: string) => {
+    await page.getByRole('button', { name: 'Editar saldo inicial' }).click()
+    await page.getByLabel('Saldo inicial en euros').fill(amount)
+    await page.getByRole('button', { name: 'Guardar saldo inicial' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  }
+  await setOpening('500')
+  await add(page, '', '15,25', '2024-09-01', 'supermarket')
+  await expect(page.getByRole('button', { name: 'Editar Supermercado' })).toBeVisible()
+  await add(page, '', '120', '2024-11-15', 'salary')
+  await balance(page, '120,00€')
+  const balances = page.getByRole('region', { name: 'Saldos de la cuenta' }).locator('strong')
+  await expect(balances.nth(1)).toContainText('604,75')
+  await page.getByRole('button', { name: 'Mes anterior' }).click()
+  await balance(page, '0,00€')
+  await expect(balances.nth(1)).toContainText('484,75')
+  await expect(balances.nth(2)).toContainText('604,75')
+  await backups(page)
+  const filePromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Descargar copia' }).click()
+  const path = (await (await filePromise).path())!
+  expect(JSON.parse(await readFile(path, 'utf8')).openingCents).toBe(50000)
+  await page.getByRole('button', { name: 'Cerrar' }).click()
+  await setOpening('-50')
+  await expect(balances.nth(2)).toContainText('54,75')
+  await backups(page)
+  await page.getByLabel('Archivo de copia').setInputFiles(path)
+  await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+  await page.reload()
+  await expect(balances.first()).toContainText('500,00')
+  await expect(balances.nth(2)).toContainText('604,75')
+})
+
+test('actualizar la app conserva la base de datos anterior', async ({ browser, page }) => {
+  const fresh = await browser.newContext()
+  try {
+    const tab = await fresh.newPage()
+    await tab.goto(new URL('icons/apple-touch.png', page.url()).href)
+    await tab.evaluate(() => new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('mi-dinero', 1)
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore('entries', { keyPath: 'id' }).add({
+          id: crypto.randomUUID(), kind: 'expense', cents: 1400, category: 'food',
+          concept: 'Registro anterior', date: '2024-09-18', createdAt: 1,
+        })
+      }
+      req.onsuccess = () => { req.result.close(); resolve() }
+      req.onerror = () => reject(req.error)
+    }))
+    await tab.goto(page.url())
+    const strip = tab.getByRole('region', { name: 'Saldos de la cuenta' })
+    await expect(strip.locator('strong').last()).toContainText('-14,00')
+    await expect(strip.locator('strong').first()).toContainText('0,00')
+  } finally { await fresh.close() }
+})

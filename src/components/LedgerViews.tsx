@@ -68,6 +68,9 @@ function SpendingRing({ totals }: { totals: Summary }) {
 }
 
 interface DashboardProps {
+  account: { closing: number, total: number }
+  openingCents: number
+  onOpening: () => void
   totals: Summary
   entries: Entry[]
   onAdd: (category?: CategoryId) => void
@@ -76,9 +79,14 @@ interface DashboardProps {
   onCategories: () => void
 }
 
-export function Dashboard({ totals, entries, onAdd, onEdit, onHistory, onCategories }: DashboardProps) {
+export function Dashboard({ account, openingCents, onOpening, totals, entries, onAdd, onEdit, onHistory, onCategories }: DashboardProps) {
   return <div className="view-stack">
     <Balance totals={totals} />
+    <section className="panel account-strip" aria-label="Saldos de la cuenta">
+      <button onClick={onOpening} aria-label="Editar saldo inicial"><small>Saldo inicial</small><strong>{money(openingCents)} <ChevronRight size={14} /></strong></button>
+      <div><small>Saldo al cierre del mes</small><strong>{money(account.closing)}</strong></div>
+      <div><small>Saldo total del historial</small><strong>{money(account.total)}</strong></div>
+    </section>
     <Shortcuts onAdd={onAdd} />
     <div className="overview-panels">
       <section className="panel recent-panel" aria-labelledby="recent-title">
