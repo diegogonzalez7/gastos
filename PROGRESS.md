@@ -33,7 +33,7 @@ Los cambios se agrupan en commits por fase. La publicación de la web requiere a
 ## Pendiente fuera del entorno
 
 - La instalación con los menús de Safari en un iPhone físico y de Chrome en un Android físico queda pendiente de una comprobación en esos dispositivos.
-- El propietario puede autorizar la publicación del sitio estático cuando quiera distribuir la aplicación.
+- El propietario ha autorizado la publicación gratuita para probar la app en el móvil.
 
 ## Seguimiento desde septiembre
 
@@ -42,3 +42,10 @@ Los cambios se agrupan en commits por fase. La publicación de la web requiere a
 - [x] Verificar la actualización y facilitar la instalación desde Safari.
 
 Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la compilación de producción. Se comprobó la migración de una base anterior, el registro sin concepto, el arrastre en meses vacíos y la recuperación del saldo inicial desde una copia. El paquete incluye el icono de iPhone de 180 × 180, los metadatos de iOS y el manifiesto en modo independiente. Las instrucciones de instalación están en el menú Más.
+
+## Publicación para pruebas móviles
+
+- [x] Compilar la versión de código 2fec1c3 y repetir las siete pruebas de dominio.
+- [x] Subir los quince archivos de distribución a la raíz de la rama `gh-pages` (commit `0ba6be5`) y comprobar el commit remoto.
+- [x] Preparar y verificar un ZIP para carga directa en Cloudflare Pages.
+- [ ] Confirmar la activación del alojamiento y abrir la URL pública por HTTPS. La política de red del entorno bloqueó las consultas a la API de GitHub y al dominio de Pages.
