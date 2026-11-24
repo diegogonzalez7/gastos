@@ -15,10 +15,12 @@ Abre la dirección que muestra Vite en la terminal. Para probar la interfaz desd
 
 ## Uso
 
-- **Empezar con tus cuentas de septiembre.** En **Resumen → Saldo inicial**, introduce el dinero que tenías justo antes del primer movimiento. Puede ser positivo, cero o negativo. Se usa una vez para todo el historial.
+- **Empezar con tus cuentas de septiembre.** En **Resumen → Saldo inicial del banco**, introduce el saldo bancario que tenías justo antes del primer movimiento. Puede ser positivo, cero o negativo. Si lo ajustaste con el cálculo anterior, revísalo tras clasificar los gastos en efectivo.
 - **Registrar.** Pulsa **Nuevo movimiento** o **Nuevo** en el móvil. Elige gasto o ingreso, escribe el importe, añade un concepto si quieres y revisa la categoría y la fecha y pulsa **Guardar movimiento**. Los accesos de **Registro rápido** abren el formulario con la categoría elegida.
 - **Fecha y cambios pendientes.** Cuando la fecha corresponde a otro mes, el formulario indica cuál. Toca **Hoy** para usar la fecha actual. Si cierras un formulario con cambios, puedes seguir editándolo o descartarlos.
-- **Consultar.** El resumen muestra ingresos, gastos y su diferencia. El **saldo al cierre del mes** suma el saldo inicial y todos los movimientos hasta ese mes inclusive. El **saldo total del historial** incluye también los meses posteriores que hayas registrado. Las flechas cambian de mes. Toca el nombre del mes para elegir otro periodo o volver al actual.
+- **Efectivo y banco.** En los gastos, selecciona **Pagado desde → Cuenta bancaria** para pagos como tarjeta, Bizum y transferencias, o **Efectivo** si pagaste en metálico. **Máquina Trabajo** siempre cuenta como efectivo, incluidos los movimientos antiguos. Los demás gastos antiguos se consideran bancarios hasta que cambies su forma de pago.
+- **Cajero.** Pulsa **Nuevo → Retirada** para registrar dinero que sacaste de tu cuenta. La retirada reduce el saldo bancario. Registra después cada compra como gasto en efectivo para que cuente en el gasto mensual.
+- **Consultar.** El balance del mes muestra ingresos menos todos los gastos, incluidos los pagos en efectivo. El **saldo bancario al cierre** combina el saldo inicial, los ingresos, los gastos bancarios y las retiradas hasta el mes elegido. El **saldo bancario total** considera todos los meses del historial. Las flechas cambian de mes. Toca el nombre del mes para elegir otro periodo o volver al actual.
 - **Buscar y corregir.** En **Movimientos** puedes buscar por concepto o categoría y filtrar ingresos o gastos. El selector de periodo incluye **Todos los meses**. Toca una fila para editarla o eliminarla con confirmación.
 - **Repetir un movimiento.** Abre un movimiento guardado y pulsa **Duplicar movimiento**. La copia empieza con la fecha de hoy y puedes ajustar sus datos antes de guardarla.
 - **Favoritos con importe.** En **Resumen → Registro rápido → Añadir favorito**, guarda un gasto o ingreso con su importe, categoría y concepto. Al tocar el favorito se abre un movimiento editable con la fecha de hoy. Usa **Gestionar favoritos** para añadir, editar o borrar accesos. Cada dispositivo guarda sus propios favoritos.
@@ -30,6 +32,8 @@ En **Más → Apariencia → Diseños** puedes usar **Original**, **Medianoche**
 ## Copias de seguridad
 
 Abre **Copias de seguridad** desde la barra lateral o el menú **Más**. **Descargar copia** guarda el saldo inicial y todos los meses en un archivo `mi-dinero-AAAA-MM-DD.json`. El archivo contiene los conceptos e importes en texto legible. Guárdalo en un lugar privado.
+
+Las copias nuevas conservan las formas de pago y las retiradas. Puedes restaurar las copias anteriores. Los gastos antiguos de Máquina Trabajo se interpretan como efectivo también al restaurarlos.
 
 El panel indica la fecha de la última exportación iniciada desde el dispositivo. Si el navegador admite compartir archivos, **Compartir copia** abre el menú del sistema para enviarla o guardarla en **Archivos**.
 

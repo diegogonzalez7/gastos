@@ -352,6 +352,57 @@ test('un favorito conserva importe y categoría y abre un movimiento con fecha d
   await balance(page, '-0,90€')
 })
 
+test('el saldo bancario separa el efectivo y las retiradas del balance mensual al recuperar una copia antigua', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
+  await page.reload()
+  await backups(page)
+  const expense = { kind: 'expense', date: '2026-11-20', createdAt: 1 }
+  const oldBackup = { app: 'mi-dinero', version: 2, currency: 'EUR', openingCents: 10000, transactions: [
+    { ...expense, id: '11111111-1111-4111-8111-111111111111', category: 'machine', concept: 'Café anterior', cents: 42 },
+    { ...expense, id: '22222222-2222-4222-8222-222222222222', category: 'meal', concept: 'Comida anterior', cents: 800 },
+  ] }
+  await page.getByLabel('Archivo de copia').setInputFiles({
+    name: 'copia-antigua.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(oldBackup)),
+  })
+  await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+  const bank = page.getByRole('region', { name: 'Saldos de la cuenta' }).locator('strong')
+  const verifyBank = async (value: string) => {
+    await expect(bank.nth(1)).toContainText(value)
+    await expect(bank.nth(2)).toContainText(value)
+  }
+  await verifyBank('92,00')
+  await balance(page, '-8,42€')
+
+  const dialog = page.getByRole('dialog')
+  const cash = dialog.getByRole('button', { name: 'Efectivo', exact: true })
+  const bankButton = dialog.getByRole('button', { name: 'Cuenta bancaria', exact: true })
+  await page.getByRole('button', { name: 'Editar Café anterior' }).click()
+  await expect(cash).toHaveAttribute('aria-pressed', 'true')
+  await expect(bankButton).toBeDisabled()
+  await dialog.getByRole('button', { name: 'Cerrar' }).click()
+
+  await page.getByRole('button', { name: 'Editar Comida anterior' }).click()
+  await expect(bankButton).toHaveAttribute('aria-pressed', 'true')
+  await cash.click()
+  await dialog.getByRole('button', { name: 'Guardar cambios' }).click()
+  await verifyBank('100,00')
+  await balance(page, '-8,42€')
+  await expect(page.getByRole('button', { name: 'Editar Comida anterior' })).toContainText('Efectivo')
+
+  await page.getByRole('button', { name: 'Nuevo movimiento' }).click()
+  await dialog.getByRole('button', { name: 'Retirada', exact: true }).click()
+  await dialog.getByLabel('Importe', { exact: true }).fill('20')
+  await dialog.getByLabel('Fecha').fill('2026-11-19')
+  await dialog.getByRole('button', { name: 'Guardar movimiento' }).click()
+  await page.reload()
+  await verifyBank('80,00')
+  await balance(page, '-8,42€')
+  await navigate(page, 'Movimientos')
+  await page.getByRole('button', { name: 'Retiradas', exact: true }).click()
+  await expect(page.locator('.entry-row')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Editar Retirada de efectivo' })).toBeVisible()
+})
+
 test('editar el tipo y la fecha traslada el importe al mes correcto', async ({ page }) => {
   await add(page, 'Devolución', '12,40', '2024-12-31', 'clothes')
   await page.getByRole('button', { name: 'Editar Devolución' }).click()
@@ -663,7 +714,7 @@ test('Compartir entrega la copia JSON al sistema y anota la fecha', async ({ pag
   await expect(page.getByText('Última exportación:')).toBeVisible()
   expect(await page.evaluate(() => Reflect.get(window, 'sharedBackup'))).toMatchObject({
     active: true,
-    backup: { version: 2, transactions: [{ concept: 'Copia compartida', cents: 120 }] },
+    backup: { version: 3, transactions: [{ concept: 'Copia compartida', cents: 120, payment: 'bank' }] },
   })
 })
 
@@ -760,7 +811,8 @@ test('el cierre aparece al cambiar de mes y se puede volver a ver o abrir su his
   await page.keyboard.press('ArrowRight')
   await expect(story.getByRole('heading', { name: 'Frente al mes anterior' })).toBeVisible()
   await expect(story.locator('.fitted-amount-value')).toContainText('29,10')
-  await story.getByRole('button', { name: 'Saldo al cierre', exact: true }).click()
+  await story.getByRole('button', { name: 'Saldo bancario al cierre', exact: true }).click()
+  await expect(story.locator('.fitted-amount-value')).toContainText('830,00')
   await story.getByRole('button', { name: 'Ver movimientos', exact: true }).click()
   await expect(story).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Movimientos', level: 1 })).toBeVisible()

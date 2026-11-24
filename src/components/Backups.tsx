@@ -146,7 +146,7 @@ export function Backups({ ledger, onClose, onRestored }: {
         <div className={preview.changes.removed ? 'restore-removals' : undefined}><dt>Se eliminarán</dt><dd>{preview.changes.removed}</dd></div>
       </dl>
       {preview.months && <p>Meses incluidos: <strong>{preview.months}</strong>.</p>}
-      <p>Saldo inicial que se restaurará: <strong className="money">{money(preview.ledger.openingCents)}</strong>.
+      <p>Saldo inicial del banco que se restaurará: <strong className="money">{money(preview.ledger.openingCents)}</strong>.
         {preview.ledger.openingCents !== preview.current.openingCents && <> Saldo inicial actual: <strong className="money">{money(preview.current.openingCents)}</strong>.</>}</p>
       {preview.ledger.reminders && <p>Recordatorios que se restaurarán: <strong>{preview.ledger.reminders.length}</strong>.</p>}
       {preview.ledger.entries.length === 0 && <p className="form-error">Esta copia dejará tu historial vacío.</p>}

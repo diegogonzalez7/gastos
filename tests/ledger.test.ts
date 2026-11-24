@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  accountBalances, calendarDay, latestFirst, parseOpening, makeBackup, monthly, parseAmount, readBackup,
+  accountBalances, calendarDay, compareEntries, latestFirst, parseOpening, makeBackup, monthly, parseAmount, readBackup,
   searchText, shiftMonth, summarize, validDay, type Entry,
 } from '../src/ledger.ts'
 
@@ -45,7 +45,8 @@ test('el resumen solo agrega el mes y ordena las categorías por gasto', () => {
 })
 
 test('la copia versionada admite todos los movimientos y también una cartera vacía', () => {
-  for (const entries of [[], [income, expense]]) {
+  const withdrawal: Entry = { ...income, id: '33333333-3333-4333-8333-333333333333', kind: 'withdrawal', category: 'withdrawal' }
+  for (const entries of [[], [income, { ...expense, payment: 'cash' as const }, withdrawal]]) {
     const ledger = { entries, openingCents: -1234 }
     assert.deepEqual(readBackup(JSON.stringify(makeBackup(ledger))), ledger)
   }
@@ -54,12 +55,24 @@ test('la copia versionada admite todos los movimientos y también una cartera va
 test('una copia dañada, incompatible o duplicada se rechaza entera', () => {
   for (const patch of [
     { cents: 0 }, { cents: 1.5 }, { cents: 1e15 }, { concept: 9 }, { kind: 'something' },
-    { category: 'salary' }, { category: '__proto__' }, { date: '2024-02-31' }, { id: 'x' }, { createdAt: -1 },
+    { category: 'salary' }, { category: '__proto__' }, { date: '2024-02-31' }, { id: 'x' }, { createdAt: -1 }, { payment: 'card' },
   ]) assert.throws(() => readBackup(JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), transactions: [income, { ...expense, ...patch }] })))
   for (const text of ['{', 'null', '{}', JSON.stringify(makeBackup({ entries: [expense, expense], openingCents: 0 })),
-    JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), version: 3 }), JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), currency: 'USD' })]) {
+    JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), version: 4 }), JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), currency: 'USD' })]) {
     assert.throws(() => readBackup(text))
   }
+})
+
+test('el efectivo cuenta como gasto y la retirada solo reduce el saldo bancario', () => {
+  const coffee: Entry = { ...expense, id: 'coffee', category: 'machine', cents: 42 }
+  const withdrawal: Entry = { ...expense, id: 'withdrawal', kind: 'withdrawal', category: 'withdrawal', cents: 3000 }
+  const cashMeal: Entry = { ...expense, id: 'lunch', category: 'meal', cents: 500, payment: 'cash' }
+  const entries = [expense, income, coffee, withdrawal, cashMeal]
+  const totals = summarize(entries)
+  assert.deepEqual([totals.income, totals.expense, totals.balance], [20000, 1747, 18253])
+  assert.deepEqual(accountBalances({ entries, openingCents: 10000 }, '2024-02'), { closing: 25795, total: 25795 })
+  assert.deepEqual(compareEntries([expense, coffee], [{ ...expense, payment: 'cash' }, { ...coffee, payment: 'cash' }]),
+    { added: 0, changed: 1, removed: 0 })
 })
 
 test('el saldo inicial se arrastra una vez, incluso en meses sin movimientos', () => {

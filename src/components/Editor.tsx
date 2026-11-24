@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
-import { ArrowDownLeft, ArrowUpRight, Copy, Trash2 } from 'lucide-react'
-import { calendarDay, categories, categoryIds, displayCategory, MAX_CONCEPT, money, monthLabel, newEntryId, parseAmount, validDay, type CategoryId, type Entry, type Kind } from '../ledger'
+import { ArrowDownLeft, ArrowUpRight, Banknote, Copy, Trash2 } from 'lucide-react'
+import { calendarDay, categories, categoryIds, displayCategory, MAX_CONCEPT, money, monthLabel, newEntryId, parseAmount, paymentSource, validDay, type CategoryId, type Entry, type Kind, type PaymentSource } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
 import { changeEntry, saveEntry, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
@@ -19,8 +19,10 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
   const initialKind = categories[initialCategory].kind
   const initialAmount = source ? (source.cents / 100).toFixed(2).replace('.', ',') : ''
   const initialConcept = source?.concept ?? ''
+  const initialPayment = paymentSource({ category: initialCategory, payment: source?.payment })
   const [kind, setKind] = useState<Kind>(initialKind)
   const [category, setCategory] = useState<CategoryId>(initialCategory)
+  const [payment, setPayment] = useState<PaymentSource>(initialPayment)
   const [amount, setAmount] = useState(initialAmount)
   const [concept, setConcept] = useState(initialConcept)
   const [date, setDate] = useState(draft.date)
@@ -29,11 +31,14 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const monthHintId = useId()
+  const paymentLabelId = useId()
+  const machineHintId = useId()
   const today = calendarDay()
   const selectedMonth = date.slice(0, 7)
   const differentMonth = validDay(date) && selectedMonth !== today.slice(0, 7)
+  const effectivePayment = paymentSource({ category, payment })
   const dirty = kind !== initialKind || category !== initialCategory || amount !== initialAmount ||
-    concept !== initialConcept || date !== draft.date
+    concept !== initialConcept || date !== draft.date || effectivePayment !== initialPayment
 
   function leave(action: 'close' | 'duplicate') {
     if (action === 'duplicate' && old) onDuplicate(old)
@@ -50,7 +55,7 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
   function selectKind(next: Kind) {
     if (next === kind) return
     setKind(next)
-    setCategory(next === 'income' ? 'salary' : 'food')
+    setCategory(next === 'income' ? 'salary' : next === 'withdrawal' ? 'withdrawal' : 'food')
     setError('')
   }
 
@@ -63,14 +68,15 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
     setBusy(true)
     setError('')
     try {
+      const method = kind === 'expense' ? { payment: effectivePayment } : {}
       if (editingFavorite) {
         const id = oldFavorite?.id ?? newEntryId()
-        onFavorite(id, { id, cents, category, concept: concept.trim() })
+        onFavorite(id, { id, cents, category, concept: concept.trim(), ...method })
         return
       }
       const entry: Entry = {
         id: old?.id ?? newEntryId(), createdAt: old?.createdAt ?? Date.now(),
-        kind, category, concept: concept.trim(), date, cents,
+        kind, category, concept: concept.trim(), date, cents, ...method,
       }
       if (old) await changeEntry(old, entry)
       else await saveEntry(entry)
@@ -108,10 +114,12 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
         <button className="danger" disabled={busy} onClick={remove}>Sí, eliminar</button>
       </div>
     </div> : <form onSubmit={save} className="entry-form">
-      <div className="kind-switch" role="group" aria-label="Tipo de movimiento">
+      <div className={'kind-switch' + (editingFavorite ? '' : ' movement-kind')} role="group" aria-label="Tipo de movimiento">
         <button type="button" aria-pressed={kind === 'expense'} onClick={() => selectKind('expense')}><ArrowUpRight size={18} />Gasto</button>
         <button type="button" aria-pressed={kind === 'income'} onClick={() => selectKind('income')}><ArrowDownLeft size={18} />Ingreso</button>
+        {!editingFavorite && <button type="button" aria-pressed={kind === 'withdrawal'} onClick={() => selectKind('withdrawal')}><Banknote size={18} />Retirada</button>}
       </div>
+      {kind === 'withdrawal' && <p className="entry-hint">Sacar efectivo reduce el saldo bancario. Los gastos se registran al usar ese dinero.</p>}
       <AmountInput label="Importe" value={amount} onChange={setAmount} />
       {!editingFavorite && <div className={'entry-date' + (differentMonth ? ' different-month' : '')}>
         <label className="field">Fecha<input type="date" name="date" required min="0001-01-01" max="9999-12-31"
@@ -119,10 +127,19 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
         <button className="secondary" type="button" disabled={date === today} onClick={() => setDate(today)}>Hoy</button>
         {differentMonth && <p id={monthHintId}>Mes del movimiento: <strong>{monthLabel(selectedMonth)}</strong></p>}
       </div>}
-      <label className="field">Concepto (opcional)<input name="concept" type="text" inputMode="text" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : 'Ej. Nómina de este mes'}
+      <label className="field">Concepto (opcional)<input name="concept" type="text" inputMode="text" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : kind === 'withdrawal' ? 'Ej. Cajero' : 'Ej. Nómina de este mes'}
         maxLength={MAX_CONCEPT} value={concept} onChange={e => setConcept(e.target.value)} /></label>
-      <label className="field">Categoría<select value={category} onChange={e => setCategory(e.target.value as CategoryId)}>
-        {(categoryIds.includes(category) ? categoryIds : [category, ...categoryIds]).filter(id => categories[id].kind === kind).map(id => <option key={id} value={id}>{categories[id].name}</option>)}</select></label>
+      {kind !== 'withdrawal' && <label className="field">Categoría<select value={category} onChange={e => setCategory(e.target.value as CategoryId)}>
+        {(categoryIds.includes(category) ? categoryIds : [category, ...categoryIds]).filter(id => categories[id].kind === kind).map(id => <option key={id} value={id}>{categories[id].name}</option>)}</select></label>}
+      {kind === 'expense' && <div className="field">
+        <span id={paymentLabelId}>Pagado desde</span>
+        <div className="kind-switch payment-switch" role="group" aria-labelledby={paymentLabelId}
+          aria-describedby={category === 'machine' ? machineHintId : undefined}>
+          <button type="button" aria-pressed={effectivePayment === 'bank'} disabled={category === 'machine'} onClick={() => setPayment('bank')}>Cuenta bancaria</button>
+          <button type="button" aria-pressed={effectivePayment === 'cash'} onClick={() => setPayment('cash')}>Efectivo</button>
+        </div>
+        {category === 'machine' && <p id={machineHintId} className="entry-hint">Máquina Trabajo se registra siempre en efectivo.</p>}
+      </div>}
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="primary wide" type="submit" disabled={busy}>{busy ? 'Guardando…' : editingFavorite ? 'Guardar favorito' : old ? 'Guardar cambios' : 'Guardar movimiento'}</button>
       {(old || oldFavorite) && <div className="editor-actions">

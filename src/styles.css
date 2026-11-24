@@ -242,6 +242,9 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .entry-form, .backup-options { display: grid; gap: 16px; }
 .kind-switch { width: 100%; }
 .kind-switch button { min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
+.movement-kind button { padding-inline: 4px; }
+.payment-switch button:disabled { opacity: .55; }
+.entry-hint { color: var(--secondary); font-size: 13px; line-height: 1.45; font-weight: 440; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13px; font-weight: 620; }
 .field > input, .field select { display: block; width: 100%; max-width: 100%; min-height: 45px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; background-color: var(--surface); font-size: 16px; font-weight: 440; }
 .field input:is([type="date"], [type="datetime-local"]) { appearance: none; text-align: left; }
@@ -404,6 +407,7 @@ input::placeholder { color: var(--muted); opacity: .85; }
   .history-tools { flex-wrap: wrap; padding: 14px; gap: 10px; }
   .search-box { flex: 1 1 230px; }
   .filter-group { flex: 1 1 auto; }
+  .filter-group button { padding-inline: 6px; }
   .search-box input { font-size: 16px; }
   .history-panel .empty-state { min-height: 240px; }
   .category-layout { grid-template-columns: 1fr; gap: 15px; }

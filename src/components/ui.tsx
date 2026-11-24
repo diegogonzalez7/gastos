@@ -8,7 +8,7 @@ import { categories, money, type CategoryId } from '../ledger'
 const icons: Record<CategoryId, LucideIcon> = {
   food: ShoppingBasket, transport: TrainFront, leisure: Ticket, home: House,
   health: HeartPulse, shopping: ShoppingBag, travel: Plane, education: BookOpen,
-  otherExpense: Layers3, salary: BriefcaseBusiness, freelance: Laptop,
+  otherExpense: Layers3, salary: BriefcaseBusiness, freelance: Laptop, withdrawal: Landmark,
   supermarket: ShoppingBasket, meal: Utensils, machine: Coffee, clothes: Shirt, hair: Scissors, vet: PawPrint,
   spotify: Music, giftExpense: Gift, bet: Ticket, quiniela: Ticket, betIncome: Ticket, quinielaIncome: Ticket,
   gift: Gift, otherIncome: Landmark,

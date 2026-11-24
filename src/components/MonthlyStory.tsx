@@ -87,11 +87,11 @@ function storySlides({ month, totals, closing, movementCount, expenseCount, spen
   }
 
   slides.push({
-    title: 'Saldo al cierre', tone: 'closing',
+    title: 'Saldo bancario al cierre', tone: 'closing',
     content: <>
       <div className="story-wallet-icon" aria-hidden="true"><Wallet size={27} /></div>
       <FittedAmount cents={closing} className="story-amount" />
-      <p className="story-detail">Tu saldo al terminar {monthLabel(month).toLocaleLowerCase('es')}.</p>
+      <p className="story-detail">El saldo de tu cuenta bancaria al terminar {monthLabel(month).toLocaleLowerCase('es')}.</p>
       <p className="story-caption">{movementCount} {movementCount === 1 ? 'movimiento registrado' : 'movimientos registrados'}.</p>
     </>,
   })

@@ -1,6 +1,6 @@
 import { categories, MAX_CENTS, MAX_CONCEPT, type Entry } from './ledger'
 
-export type Favorite = Pick<Entry, 'id' | 'category' | 'concept' | 'cents'>
+export type Favorite = Pick<Entry, 'id' | 'category' | 'concept' | 'cents' | 'payment'>
 export const favoritesKey = 'mi-dinero:favorites'
 
 export const favoriteName = (favorite: Favorite) => favorite.concept || categories[favorite.category].name
@@ -11,6 +11,7 @@ export function readFavorites(): Favorite[] {
     return Array.isArray(data) ? data.filter((favorite): favorite is Favorite =>
       typeof favorite?.id === 'string' && typeof favorite.category === 'string' && Object.hasOwn(categories, favorite.category) &&
       typeof favorite.concept === 'string' && favorite.concept.length <= MAX_CONCEPT &&
+      (favorite.payment === undefined || favorite.payment === 'cash' || favorite.payment === 'bank') &&
       Number.isSafeInteger(favorite.cents) && favorite.cents > 0 && favorite.cents <= MAX_CENTS) : []
   } catch { return [] }
 }

@@ -108,3 +108,9 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - La vista previa de restauración, desde archivo o Dropbox, cuenta los movimientos añadidos, modificados y eliminados. Con Dropbox conectado permite subir una copia independiente del historial actual antes de confirmar.
 - Registro rápido admite favoritos editables con importe, categoría y concepto que rellenan un movimiento con la fecha de hoy. Los favoritos se guardan por dispositivo.
 - Las pruebas de navegador cubren el uso y la gestión de favoritos, la comparación de historiales y la copia previa a restaurar con Dropbox simulado.
+
+## Saldo bancario y efectivo
+
+- El formulario distingue los gastos pagados desde la cuenta bancaria y en efectivo. Máquina Trabajo se trata como efectivo, también en el historial y en copias antiguas.
+- Los gastos en efectivo siguen en los totales de gasto y categorías. Las retiradas de cajero afectan al saldo bancario y quedan fuera de los totales de ingresos y gastos. Resumen, historial y cierre mensual muestran esta distinción.
+- Las copias nuevas guardan las formas de pago y retiradas. La restauración sigue aceptando versiones anteriores. El saldo inicial guardado se conserva para que el usuario pueda contrastarlo con el banco.

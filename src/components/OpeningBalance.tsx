@@ -20,7 +20,7 @@ export function OpeningBalance({ original, onClose, onSaved }: {
   }
   return <Modal title="Saldo inicial" onClose={onClose} busy={busy}>
     <form className="entry-form" onSubmit={save}>
-      <p>Introduce cuánto dinero tenías antes del primer movimiento de tu historial.</p>
+      <p>Introduce el saldo que tenías en el banco justo antes del primer movimiento de tu historial.</p>
       <AmountInput label="Saldo inicial en euros" value={value} onChange={setValue} selectOnFocus />
       <button type="button" className="secondary" aria-pressed={negative} onClick={() => setNegative(!negative)}>
         {negative ? 'Saldo negativo' : 'Saldo positivo o cero'}

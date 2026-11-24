@@ -24,7 +24,7 @@ test('el cierre usa solo su mes, reúne categorías antiguas y arrastra el saldo
   assert.equal(report.expenseCount, 3)
   assert.equal(report.spendingDays, 2)
   assert.deepEqual(report.previous, { month: '2026-10', expense: 20000 })
-  assert.equal(report.closing, 419410)
+  assert.equal(report.closing, 419500)
 })
 
 test('un mes vacío no inventa gastos y mantiene su saldo acumulado', () => {
@@ -32,7 +32,7 @@ test('un mes vacío no inventa gastos y mantiene su saldo acumulado', () => {
   assert.equal(report.movementCount, 0)
   assert.equal(report.totals.expense, 0)
   assert.equal(report.largestExpense, null)
-  assert.equal(report.closing, 379410)
+  assert.equal(report.closing, 379500)
 })
 
 test('el aviso de calendario se repite el día 1 a las 09:00 también al cambiar de año', () => {

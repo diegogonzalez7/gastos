@@ -3,7 +3,7 @@ import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Star, Wallet, X,
 } from 'lucide-react'
 import {
-  capitalize, categories, categoryIds, dateLabel, displayCategory, money, percent, searchText,
+  capitalize, categories, categoryIds, dateLabel, displayCategory, money, paymentSource, percent, searchText,
   type CategoryId, type Entry, type Kind, type Summary,
 } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
@@ -14,11 +14,13 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
   const category = displayCategory(entry.category)
   const title = entry.concept || categories[category].name
   const description = useId()
+  const paymentLabel = entry.kind === 'expense' ? (paymentSource(entry) === 'cash' ? ' · Efectivo' : ' · Cuenta bancaria') : ''
+  const detail = entry.concept || entry.kind === 'withdrawal' ? categories[category].name : incoming ? 'Ingreso' : 'Gasto'
   return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + title}
     aria-describedby={description + '-category ' + description + '-amount'}>
     <CategoryBadge category={category} />
     <span className="entry-info"><strong>{title}</strong><small id={description + '-category'}>
-      {entry.concept ? categories[category].name : incoming ? 'Ingreso' : 'Gasto'}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
+      {detail}{paymentLabel}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
     </small></span>
     <span className={'entry-value money' + (incoming ? ' positive' : '')} id={description + '-amount'}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
     <ChevronRight className="entry-chevron" size={15} />
@@ -112,9 +114,9 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, o
   return <div className="view-stack">
     <Balance totals={totals} />
     <section className="panel account-strip" aria-label="Saldos de la cuenta">
-      <button onClick={onOpening} aria-label="Editar saldo inicial"><small>Saldo inicial</small><strong className="money">{money(openingCents)} <ChevronRight size={14} /></strong></button>
-      <div><small>Saldo al cierre del mes</small><strong className="money">{money(account.closing)}</strong></div>
-      <div><small>Saldo total del historial</small><strong className="money">{money(account.total)}</strong></div>
+      <button onClick={onOpening} aria-label="Editar saldo inicial"><small>Saldo inicial del banco</small><strong className="money">{money(openingCents)} <ChevronRight size={14} /></strong></button>
+      <div><small>Saldo bancario al cierre</small><strong className="money">{money(account.closing)}</strong></div>
+      <div><small>Saldo bancario total</small><strong className="money">{money(account.total)}</strong></div>
     </section>
     <Shortcuts onAdd={onAdd} favorites={favorites} onUseFavorite={onUseFavorite} onManageFavorites={onManageFavorites} />
     <div className="overview-panels">
@@ -165,7 +167,7 @@ export function History({ entries, category, onClearCategory, onEdit, onAdd }: {
       <label className="search-box"><Search size={18} /><input type="search" aria-label="Buscar movimientos"
         placeholder="Buscar por concepto o categoría" value={query} onChange={event => setQuery(event.target.value)} /></label>
       <div className="filter-group" role="group" aria-label="Filtrar por tipo">
-        {([['all', 'Todos'], ['expense', 'Gastos'], ['income', 'Ingresos']] as const).map(([value, label]) =>
+        {([['all', 'Todos'], ['expense', 'Gastos'], ['income', 'Ingresos'], ['withdrawal', 'Retiradas']] as const).map(([value, label]) =>
           <button key={value} aria-pressed={kind === value} onClick={() => setKind(value)}>{label}</button>)}
       </div>
     </div>

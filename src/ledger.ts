@@ -1,6 +1,7 @@
 import { readReminders, type Reminder } from './reminders.ts'
 
-export type Kind = 'expense' | 'income'
+export type Kind = 'expense' | 'income' | 'withdrawal'
+export type PaymentSource = 'cash' | 'bank'
 
 export const categories = {
   food: { name: 'Alimentación', kind: 'expense', color: '#f0a451' },
@@ -28,6 +29,7 @@ export const categories = {
   freelance: { name: 'Trabajo independiente', kind: 'income', color: '#639bb5' },
   gift: { name: 'Regalo', kind: 'income', color: '#b78cc5' },
   otherIncome: { name: 'Otro', kind: 'income', color: '#879f93' },
+  withdrawal: { name: 'Retirada de efectivo', kind: 'withdrawal', color: '#7a9fb3' },
 } as const
 
 export type CategoryId = keyof typeof categories
@@ -50,6 +52,11 @@ export interface Entry {
   concept: string
   date: string
   createdAt: number
+  payment?: PaymentSource
+}
+
+export function paymentSource({ category, payment }: Pick<Entry, 'category' | 'payment'>): PaymentSource {
+  return category === 'machine' || (categories[category].kind === 'expense' && payment === 'cash') ? 'cash' : 'bank'
 }
 
 export function newEntryId(): string {
@@ -102,6 +109,7 @@ export function accountBalances({ entries, openingCents }: Ledger, month: string
   let closing = openingCents
   let total = openingCents
   for (const entry of entries) {
+    if (paymentSource(entry) === 'cash') continue
     const signed = entry.kind === 'income' ? entry.cents : -entry.cents
     total += signed
     if (entry.date.slice(0, 7) <= month) closing += signed
@@ -152,7 +160,7 @@ export function summarize(entries: Entry[]) {
   for (const entry of entries) {
     if (entry.kind === 'income') {
       income += entry.cents
-    } else {
+    } else if (entry.kind === 'expense') {
       expense += entry.cents
       const category = displayCategory(entry.category)
       amounts.set(category, (amounts.get(category) ?? 0) + entry.cents)
@@ -173,32 +181,36 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function readEntry(value: unknown): Entry {
+function readEntry(value: unknown, version: number): Entry {
   if (!record(value)) throw new Error('La copia contiene un movimiento ilegible.')
-  const { id, kind, cents, category, concept, date, createdAt } = value
+  const { id, kind, cents, category, concept, date, createdAt, payment } = value
   if (typeof id !== 'string' || !/^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i.test(id)
-      || (kind !== 'income' && kind !== 'expense')
+      || (kind !== 'income' && kind !== 'expense' && !(version === 3 && kind === 'withdrawal'))
       || typeof cents !== 'number' || !Number.isSafeInteger(cents) || cents <= 0 || cents > MAX_CENTS
       || typeof category !== 'string' || !Object.hasOwn(categories, category)
       || categories[category as CategoryId].kind !== kind
+      || (payment !== undefined && (kind !== 'expense' || (payment !== 'cash' && payment !== 'bank')))
       || typeof concept !== 'string' || concept.length > MAX_CONCEPT
       || !validDay(date) || typeof createdAt !== 'number' || !Number.isSafeInteger(createdAt) || createdAt < 0) {
     throw new Error('La copia contiene un movimiento con datos no válidos.')
   }
-  return { id: id.toLowerCase(), kind, cents, category: category as CategoryId, concept: concept.trim(), date, createdAt }
+  const entry: Entry = { id: id.toLowerCase(), kind, cents, category: category as CategoryId, concept: concept.trim(), date, createdAt }
+  return payment === undefined ? entry : { ...entry, payment: paymentSource({ ...entry, payment }) }
 }
 
-export function makeBackup({ entries: transactions, openingCents, reminders }: Ledger) {
-  return { app: 'mi-dinero', version: 2, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions, reminders }
+export function makeBackup({ entries, openingCents, reminders }: Ledger) {
+  const transactions = entries.map(entry => entry.kind === 'expense' ? { ...entry, payment: paymentSource(entry) } : entry)
+  return { app: 'mi-dinero', version: 3, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions, reminders }
 }
 
 export function readBackup(text: string): Ledger {
   let data: unknown
   try { data = JSON.parse(text) } catch { throw new Error('El archivo no contiene JSON válido.') }
   if (!record(data) || data.app !== 'mi-dinero') throw new Error('Selecciona una copia creada con Mi Dinero.')
-  if ((data.version !== 1 && data.version !== 2) || data.currency !== 'EUR') throw new Error('La versión o la moneda de esta copia es incompatible.')
+  const { version } = data
+  if ((version !== 1 && version !== 2 && version !== 3) || data.currency !== 'EUR') throw new Error('La versión o la moneda de esta copia es incompatible.')
   if (!Array.isArray(data.transactions)) throw new Error('Falta la lista de movimientos en la copia.')
-  const entries = data.transactions.map(readEntry)
+  const entries = data.transactions.map(value => readEntry(value, version))
   if (new Set(entries.map(entry => entry.id)).size !== entries.length) throw new Error('La copia contiene movimientos duplicados.')
   const openingCents = data.version === 1 ? 0 : data.openingCents
   if (typeof openingCents !== 'number' || !Number.isSafeInteger(openingCents) || Math.abs(openingCents) > MAX_CENTS) {
@@ -210,7 +222,7 @@ export function readBackup(text: string): Ledger {
 
 export function equalEntry(a: Entry | undefined, b: Entry) {
   return a?.id === b.id && a.kind === b.kind && a.cents === b.cents && a.category === b.category &&
-    a.concept === b.concept && a.date === b.date && a.createdAt === b.createdAt
+    a.concept === b.concept && a.date === b.date && a.createdAt === b.createdAt && paymentSource(a) === paymentSource(b)
 }
 
 export function compareEntries(current: Entry[], incoming: Entry[]) {
