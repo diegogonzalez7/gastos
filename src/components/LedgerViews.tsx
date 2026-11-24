@@ -1,12 +1,12 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Wallet, X,
 } from 'lucide-react'
 import {
-  capitalize, categories, categoryIds, dateLabel, displayCategory, money, searchText,
+  capitalize, categories, categoryIds, dateLabel, displayCategory, money, percent, searchText,
   type CategoryId, type Entry, type Kind, type Summary,
 } from '../ledger'
-import { CategoryBadge, EmptyState } from './ui'
+import { CategoryBadge, EmptyState, FittedAmount } from './ui'
 
 export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, onEdit: (entry: Entry) => void, showDate?: boolean }) {
   const incoming = entry.kind === 'income'
@@ -25,35 +25,12 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
 }
 
 export function Balance({ totals }: { totals: Summary }) {
-  const amount = money(totals.balance)
-  const amountBox = useRef<HTMLDivElement>(null)
-  const amountMeasure = useRef<HTMLSpanElement>(null)
-
-  useLayoutEffect(() => {
-    const box = amountBox.current!
-    const measure = amountMeasure.current!
-    function fit() {
-      const naturalWidth = measure.getBoundingClientRect().width
-      if (!naturalWidth || !box.clientWidth) return
-      const scale = Math.min(1, (box.clientWidth - 1) / naturalWidth)
-      box.style.setProperty('--balance-scale', String(scale))
-    }
-    fit()
-    const observer = new ResizeObserver(fit)
-    observer.observe(box)
-    observer.observe(measure)
-    return () => observer.disconnect()
-  }, [amount])
-
   return <section className="balance-card" aria-label="Resumen financiero del mes">
     <div className="hero-pattern" aria-hidden="true" />
     <img className="hero-wallet" src={import.meta.env.BASE_URL + 'cartera.webp'} alt="" />
     <div className="balance-content">
       <div className="balance-label"><Wallet size={17} />Balance del mes</div>
-      <div ref={amountBox} className="balance-amount">
-        <span ref={amountMeasure} className="balance-measure money" aria-hidden="true">{amount}</span>
-        <span className="balance-value money">{amount}</span>
-      </div>
+      <FittedAmount cents={totals.balance} className="balance-amount" />
       <div className="balance-metrics">
         <div className="hero-metric"><span className="metric-icon income"><ArrowDownLeft size={19} /></span>
           <span><small>Ingresos</small><strong className="money">{money(totals.income)}</strong></span></div>
@@ -74,9 +51,6 @@ function Shortcuts({ onAdd }: { onAdd: (category?: CategoryId) => void }) {
     </button>)}</div>
   </section>
 }
-
-const percent = (fraction: number) => fraction > 0 && fraction < 0.01
-  ? '<1 %' : new Intl.NumberFormat('es-ES', { style: 'percent', maximumFractionDigits: 0 }).format(fraction)
 
 function SpendingRing({ totals }: { totals: Summary }) {
   let start = 0

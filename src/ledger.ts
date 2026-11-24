@@ -69,6 +69,9 @@ export const currency = new Intl.NumberFormat('es-ES', {
 })
 export const money = (cents: number) => currency.format(cents / 100).replace(/\s+€$/, '\u202f€')
 
+const percentFormat = new Intl.NumberFormat('es-ES', { style: 'percent', maximumFractionDigits: 0 })
+export const percent = (fraction: number) => fraction > 0 && fraction < 0.01 ? '<1 %' : percentFormat.format(fraction)
+
 function unsignedCents(input: string): number | null {
   let value = input.trim()
   if (/^\d{1,3}(\.\d{3})+,\d{1,2}$/.test(value)) value = value.replaceAll('.', '')

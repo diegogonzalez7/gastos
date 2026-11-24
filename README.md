@@ -54,6 +54,12 @@ Para configurar el atajo en el iPhone:
 
 El calendario o Recordatorios de Apple se encargan de la notificación tras guardar el aviso allí. Si cambias un pago, lo marcas como pagado o lo eliminas en Mi Dinero, actualiza también el aviso que ya hayas añadido en la otra app.
 
+## Cierre mensual
+
+Desde el día 1 puedes abrir el **Cierre del mes anterior** en **Resumen**. Si seleccionas otro mes ya terminado, el enlace abre el cierre de ese periodo. Desliza o usa las flechas para pasar por el balance, la categoría con más gasto, el gasto más alto, la comparación con el mes anterior y el saldo al cierre. La comparación aparece cuando hay movimientos en ambos meses. Los importes se calculan con los datos que tienes en ese dispositivo.
+
+En el iPhone, abre **Más → Aviso del cierre mensual → Abrir atajo**. Usa el atajo **Pago de Mi Dinero** para crear el primer aviso. Luego abre ese aviso en **Recordatorios** y selecciona **Repetir → Cada mes**. Si prefieres el calendario, en el mismo panel puedes descargar e importar una cita recurrente con alerta. Ambas opciones proponen el día 1 a las 09:00, hora local.
+
 ## Probar la versión instalable
 
 ```sh

@@ -64,20 +64,43 @@ function foldLine(line: string) {
   return output
 }
 
-export function reminderCalendar(reminder: Reminder, now = Date.now()) {
-  const title = calendarText('Pagar ' + reminder.title)
+function calendarEvent(uid: string, title: string, start: string, now: number, recurrence?: string) {
+  const escapedTitle = calendarText(title)
   return [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Mi Dinero//Recordatorios//ES', 'BEGIN:VEVENT',
-    'UID:' + reminder.id + '@mi-dinero', 'DTSTAMP:' + utc(now), 'DTSTART:' + utc(reminder.at),
-    'DURATION:PT15M', 'SUMMARY:' + title,
-    'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', 'DESCRIPTION:' + title, 'END:VALARM',
+    'UID:' + uid + '@mi-dinero', 'DTSTAMP:' + utc(now), 'DTSTART:' + start,
+    'DURATION:PT15M', 'SUMMARY:' + escapedTitle,
+    ...(recurrence ? ['RRULE:' + recurrence] : []),
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', 'DESCRIPTION:' + escapedTitle, 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR', '',
   ].map(foldLine).join('\r\n')
 }
 
+export function reminderCalendar(reminder: Reminder, now = Date.now()) {
+  return calendarEvent(reminder.id, 'Pagar ' + reminder.title, utc(reminder.at), now)
+}
+
+export function nextMonthlyAlert(now = new Date()) {
+  const first = new Date(now)
+  first.setMonth(first.getMonth() + 1, 1)
+  first.setHours(9, 0, 0, 0)
+  return first
+}
+
+export const monthlyAlertTitle = 'Ver el cierre mensual en Mi Dinero'
+
+export function monthlyAlertCalendar(now = new Date()) {
+  const start = reminderInput(nextMonthlyAlert(now).getTime()).replace(/[-:]/g, '') + '00'
+  return calendarEvent('cierre-mensual', monthlyAlertTitle, start, now.getTime(), 'FREQ=MONTHLY;BYMONTHDAY=1')
+}
+
 export const shortcutName = 'Pago de Mi Dinero'
 
-export function reminderShortcut(reminder: Reminder) {
-  const payload = JSON.stringify({ titulo: 'Pagar ' + reminder.title, fecha: new Date(reminder.at).toISOString() })
+export function appleReminderShortcut(title: string, at: number) {
+  const payload = JSON.stringify({ titulo: title, fecha: new Date(at).toISOString() })
   return 'shortcuts://run-shortcut?name=' + encodeURIComponent(shortcutName) + '&input=text&text=' + encodeURIComponent(payload)
+}
+
+export function reminderShortcut(reminder: Reminder) {
+  return appleReminderShortcut('Pagar ' + reminder.title, reminder.at)
 }

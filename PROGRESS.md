@@ -83,3 +83,9 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - Cada recordatorio genera una cita con alerta a la hora indicada. En iPhone también se puede enviar al atajo de Recordatorios de Apple.
 - Las copias JSON guardan los recordatorios junto a los movimientos. Las copias creadas antes de esta función mantienen los recordatorios que ya existen en el dispositivo.
 - La guía describe cómo mover el mismo JSON entre iPhone y ordenador con iCloud Drive o AirDrop.
+
+## Cierre mensual en historias
+
+- Resumen del mes cerrado con balance, categoría principal, gasto mayor, comparación y saldo al cierre. Se recalcula con los movimientos del dispositivo.
+- Acceso discreto en Resumen, con un punto para el cierre nuevo y navegación por deslizamiento, controles y teclado.
+- Aviso opcional el día 1 a las 09:00 mediante el atajo de Apple o una cita recurrente de calendario.

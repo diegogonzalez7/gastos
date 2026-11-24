@@ -297,7 +297,7 @@ test('el balance de cuatro cifras y los importes largos caben en una línea', as
   await page.setViewportSize({ width: 390, height: 844 })
   await add(page, 'Ingreso de prueba', '1179,88', '2026-10-01', 'salary')
   await balance(page, '1.179,88€')
-  const amount = page.locator('.balance-value')
+  const amount = page.locator('.balance-amount .fitted-amount-value')
   await page.evaluate(() => document.fonts.ready)
   const fits = () => amount.evaluate(node => {
     const text = document.createRange()
@@ -555,4 +555,62 @@ test('recuperar una copia antigua conserva los recordatorios guardados', async (
   const file = await download
   const backup = JSON.parse(await readFile((await file.path())!, 'utf8'))
   expect(backup.reminders).toEqual([reminder])
+})
+
+test('el cierre aparece al cambiar de mes y se puede volver a ver o abrir su historial', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-11-30T23:58:00+01:00') })
+  await page.reload()
+  await add(page, 'Gasto anterior', '100', '2026-10-23', 'food')
+  await add(page, 'Mercado', '70', '2026-11-22', 'food')
+  await add(page, 'Café', '0,90', '2026-11-22', 'machine')
+  await add(page, 'Nómina', '1000', '2026-11-01', 'salary')
+  await expect(page.getByRole('button', { name: /Cierre de octubre de 2026/ })).toBeVisible()
+
+  await page.clock.fastForward(3 * 60 * 1000)
+  await page.getByRole('button', { name: 'Cierre de noviembre de 2026, nuevo' }).click()
+  const story = page.getByRole('dialog', { name: 'Cierre mensual' })
+  await expect(story.getByRole('heading', { name: 'Balance del mes' })).toBeVisible()
+  await expect(story.locator('.fitted-amount-value')).toContainText('929,10')
+  await story.getByRole('button', { name: 'Siguiente', exact: true }).click()
+  await expect(story.getByRole('heading', { name: 'La categoría en la que más gastaste' })).toBeVisible()
+  await expect(story.locator('.story-category')).toContainText('Alimentación')
+
+  const stage = story.locator('.story-stage')
+  await stage.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 200, clientY: 100 })
+  await stage.dispatchEvent('pointerup', { pointerType: 'touch', clientX: 90, clientY: 105 })
+  await expect(story.getByRole('heading', { name: 'Tu mayor gasto' })).toBeVisible()
+  await expect(story.getByText('Mercado', { exact: true })).toBeVisible()
+  await page.keyboard.press('ArrowRight')
+  await expect(story.getByRole('heading', { name: 'Frente al mes anterior' })).toBeVisible()
+  await expect(story.locator('.fitted-amount-value')).toContainText('29,10')
+  await story.getByRole('button', { name: 'Saldo al cierre', exact: true }).click()
+  await story.getByRole('button', { name: 'Ver movimientos', exact: true }).click()
+  await expect(story).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Movimientos', level: 1 })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Editar Mercado' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Editar Gasto anterior' })).toHaveCount(0)
+
+  await page.goto('./')
+  await page.getByRole('button', { name: 'Cierre de noviembre de 2026', exact: true }).click()
+  await expect(story.getByRole('heading', { name: 'Balance del mes' })).toBeVisible()
+})
+
+test('el aviso mensual genera una cita recurrente y enlaza al atajo existente', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
+  const more = page.getByRole('button', { name: 'Más', exact: true })
+  if (await more.isVisible()) {
+    await more.click()
+    await page.getByRole('button', { name: 'Aviso del cierre mensual' }).click()
+  } else await page.getByRole('button', { name: 'Aviso mensual', exact: true }).click()
+  const notice = page.getByRole('dialog', { name: 'Aviso del cierre mensual' })
+  const shortcut = new URL((await notice.getByRole('link', { name: 'Abrir atajo' }).getAttribute('href'))!)
+  expect(shortcut.searchParams.get('name')).toBe('Pago de Mi Dinero')
+  expect(JSON.parse(shortcut.searchParams.get('text')!)).toEqual({
+    titulo: 'Ver el cierre mensual en Mi Dinero', fecha: '2026-12-01T08:00:00.000Z',
+  })
+  const download = page.waitForEvent('download')
+  await notice.getByRole('button', { name: 'Descargar cita mensual' }).click()
+  const file = await download
+  expect(file.suggestedFilename()).toBe('mi-dinero-cierre-mensual.ics')
+  expect(await readFile((await file.path())!, 'utf8')).toContain('RRULE:FREQ=MONTHLY;BYMONTHDAY=1')
 })

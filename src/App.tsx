@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Archive, Bell, Check, ChevronRight, CircleAlert, Database, Ellipsis, LayoutDashboard,
+  Archive, Bell, CalendarClock, Check, ChevronRight, CircleAlert, Database, Ellipsis, LayoutDashboard,
   List, MonitorSmartphone, Moon, PieChart, Plus, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
-  accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, summarize, type CategoryId, type Entry,
+  accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry,
 } from './ledger'
 import { readLedger, storageMessage, watchEntries } from './storage'
 import { Brand, Modal } from './components/ui'
@@ -14,6 +14,9 @@ import { OpeningBalance } from './components/OpeningBalance'
 import { Editor, type EditorDraft } from './components/Editor'
 import { CategoryView, Dashboard, History } from './components/LedgerViews'
 import { Reminders } from './components/Reminders'
+import { MonthlyAlert } from './components/MonthlyAlert'
+import { MonthlyStory, MonthlyStoryLink } from './components/MonthlyStory'
+import { monthlyReport } from './monthlyReport'
 import type { Reminder } from './reminders'
 
 const pages = {
@@ -23,6 +26,12 @@ const pages = {
 }
 type Page = keyof typeof pages
 const pageIds = Object.keys(pages) as Page[]
+const seenReportKey = 'mi-dinero:seen-monthly-story'
+
+function savedSeenReport() {
+  try { return localStorage.getItem(seenReportKey) } catch { return null }
+}
+
 function pageFromHash(): Page {
   const value = location.hash.slice(1)
   return Object.hasOwn(pages, value) ? value as Page : 'resumen'
@@ -49,7 +58,7 @@ function ThemeControl({ theme, onChange }: { theme: Theme, onChange: (theme: The
 }
 
 export default function App() {
-  const today = calendarDay()
+  const [today, setToday] = useState(calendarDay)
   const [page, setPage] = useState<Page>(pageFromHash)
   const [month, setMonth] = useState(today.slice(0, 7))
   const [allMonths, setAllMonths] = useState(false)
@@ -62,7 +71,9 @@ export default function App() {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState('')
   const [editor, setEditor] = useState<EditorDraft | null>(null)
-  const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | null>(null)
+  const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | 'monthly-alert' | null>(null)
+  const [storyMonth, setStoryMonth] = useState<string | null>(null)
+  const [seenReport, setSeenReport] = useState(savedSeenReport)
   const [toast, setToast] = useState<{ label: string } | null>(null)
   const sequence = useRef(0)
 
@@ -81,6 +92,23 @@ export default function App() {
     }
   }, [])
   useEffect(() => { void reload(); return watchEntries(reload) }, [reload])
+  useEffect(() => {
+    let timer: number
+    function refreshDay() {
+      const now = new Date()
+      setToday(calendarDay(now))
+      const midnight = new Date(now)
+      midnight.setHours(24, 0, 0, 0)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(refreshDay, midnight.getTime() - now.getTime())
+    }
+    refreshDay()
+    document.addEventListener('visibilitychange', refreshDay)
+    return () => {
+      window.clearTimeout(timer)
+      document.removeEventListener('visibilitychange', refreshDay)
+    }
+  }, [])
   useEffect(() => {
     document.documentElement.toggleAttribute('data-app-ready', loadState !== 'loading')
   }, [loadState])
@@ -112,6 +140,12 @@ export default function App() {
   const monthEntries = useMemo(() => monthly(entries, month), [entries, month])
   const totals = useMemo(() => summarize(monthEntries), [monthEntries])
   const account = useMemo(() => accountBalances({ entries, openingCents }, month), [entries, openingCents, month])
+  const currentMonth = today.slice(0, 7)
+  const lastClosedMonth = shiftMonth(currentMonth, -1)
+  const reportLinkMonth = month < currentMonth ? month : lastClosedMonth
+  const unreadReport = reportLinkMonth === lastClosedMonth && seenReport !== lastClosedMonth &&
+    entries.some(entry => entry.date.startsWith(lastClosedMonth))
+  const report = useMemo(() => storyMonth ? monthlyReport(entries, openingCents, storyMonth) : null, [entries, openingCents, storyMonth])
   const wholeHistory = page === 'movimientos' && allMonths
   function notify(label: string) { setToast({ label }) }
   function changeTheme(next: Theme) {
@@ -129,7 +163,7 @@ export default function App() {
     goTo('movimientos')
   }
   function add(id?: CategoryId) {
-    const date = wholeHistory || month === today.slice(0, 7) ? today : month + '-01'
+    const date = wholeHistory || month === currentMonth ? today : month + '-01'
     setEditor({ date, category: id })
   }
   function edit(entry: Entry) { setEditor({ date: entry.date, original: entry }) }
@@ -138,6 +172,13 @@ export default function App() {
     setEditor(null)
     void reload()
     notify(message)
+  }
+  function openMonthlyStory() {
+    if (unreadReport) {
+      setSeenReport(reportLinkMonth)
+      try { localStorage.setItem(seenReportKey, reportLinkMonth) } catch { /* The story still opens. */ }
+    }
+    setStoryMonth(reportLinkMonth)
   }
   const navLinks = (mobile: boolean) => pageIds.map(key => {
     const Icon = pages[key].icon
@@ -156,6 +197,7 @@ export default function App() {
       <nav className="side-navigation" aria-label="Navegación principal">{navLinks(false)}</nav>
       <div className="sidebar-bottom">
         <button className="nav-item backup-nav" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={19} />Recordatorios</button>
+        <button className="nav-item backup-nav" onClick={() => setUtility('monthly-alert')}><CalendarClock size={19} />Aviso mensual</button>
         <button className="nav-item backup-nav" onClick={() => setUtility('backup')}><Archive size={19} />Copias de seguridad</button>
         <div className="side-settings"><span className="settings-label">Apariencia</span>{themeControl}</div>
         <div className="local-status"><span />Datos en este dispositivo</div>
@@ -172,8 +214,11 @@ export default function App() {
         {loadState === 'error'
           ? <div className="storage-error" role="alert"><CircleAlert size={23} /><p>{loadError}</p><button className="secondary" onClick={reload}>Reintentar</button></div>
           : loadState === 'ready' && <div key={page} className="page-content">
-            {page === 'resumen' ? <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={monthEntries} totals={totals} onAdd={add} onEdit={edit}
-              onHistory={showHistory} onCategories={() => goTo('categorias')} />
+            {page === 'resumen' ? <>
+              <div className="monthly-story-entry"><MonthlyStoryLink month={reportLinkMonth} unread={unreadReport} onClick={openMonthlyStory} /></div>
+              <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={monthEntries} totals={totals} onAdd={add} onEdit={edit}
+                onHistory={showHistory} onCategories={() => goTo('categorias')} />
+            </>
             : page === 'movimientos' ? <History entries={wholeHistory ? entries : monthEntries} category={category} onClearCategory={() => setCategory(null)}
               onEdit={edit} onAdd={add} />
             : <CategoryView totals={totals} onHistory={showHistory} onAdd={add} />}
@@ -186,8 +231,11 @@ export default function App() {
       onSaved={() => { setEditingOpening(null); void reload(); notify('Saldo inicial guardado') }} />}
     {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} onClose={() => setEditor(null)}
       onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} />}
+    {report && <MonthlyStory key={report.month} report={report} onClose={() => setStoryMonth(null)}
+      onHistory={() => { setStoryMonth(null); setMonth(report.month); showHistory() }} />}
     {utility === 'more' && <Modal title="Más opciones" onClose={() => setUtility(null)}>
       <button className="more-backup more-reminders" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={20} />Recordatorios<ChevronRight size={17} /></button>
+      <button className="more-backup more-reminders" onClick={() => setUtility('monthly-alert')}><CalendarClock size={20} />Aviso del cierre mensual<ChevronRight size={17} /></button>
       <button className="more-backup" onClick={() => setUtility('backup')}><Archive size={20} />Copias de seguridad<ChevronRight size={17} /></button>
       <details className="iphone-install"><summary>Instalar en la pantalla de inicio del iPhone</summary>
         <p>Abre Mi Dinero en Safari mediante HTTPS. Pulsa Compartir, elige Añadir a la pantalla de inicio y confirma con Añadir. Si aparece Abrir como app web, déjalo activado.</p>
@@ -196,6 +244,7 @@ export default function App() {
       <p className="local-note"><Database size={17} />Tus datos se guardan en este dispositivo.</p>
     </Modal>}
     {utility === 'reminders' && <Reminders reminders={reminders} onClose={() => setUtility(null)} onChange={reload} />}
+    {utility === 'monthly-alert' && <MonthlyAlert onClose={() => setUtility(null)} />}
     {utility === 'backup' && <Backups ledger={loadState === 'ready' ? { entries, openingCents, reminders } : null} onClose={() => setUtility(null)}
       onRestored={() => { setUtility(null); void reload(); notify('Copia restaurada') }} />}
     {toast && <div className="toast" role="status"><Check size={17} />{toast.label}<button aria-label="Ocultar aviso" onClick={() => setToast(null)}><X size={14} /></button></div>}

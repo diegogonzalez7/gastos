@@ -133,9 +133,10 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .balance-label { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 540; color: #d2e6d9; }
 .balance-label svg { color: #b5d9c5; }
 .money { font-variant-numeric: tabular-nums; letter-spacing: .015em; }
-.balance-amount { position: relative; font-size: clamp(44px, 4.45vw, 68px); line-height: 1.15; font-weight: 540; margin: 6px 0 21px; white-space: nowrap; }
-.balance-measure { position: absolute; inset-inline-start: 0; width: max-content; visibility: hidden; }
-.balance-value { font-size: calc(1em * var(--balance-scale, 1)); }
+.balance-amount { font-size: clamp(44px, 4.45vw, 68px); line-height: 1.15; font-weight: 540; margin: 6px 0 21px; }
+.fitted-amount { position: relative; white-space: nowrap; }
+.fitted-amount-measure { position: absolute; inset-inline-start: 0; width: max-content; visibility: hidden; }
+.fitted-amount-value { font-size: calc(1em * var(--balance-scale, 1)); }
 .balance-metrics { display: flex; align-items: stretch; width: fit-content; max-width: 100%; }
 .hero-metric { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .hero-metric + .hero-metric { margin-left: 24px; border-left: 1px solid rgb(205 232 210 / 23%); padding-left: 24px; }

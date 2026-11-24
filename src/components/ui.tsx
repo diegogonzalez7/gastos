@@ -1,9 +1,9 @@
-import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, type CSSProperties, type KeyboardEventHandler, type ReactNode } from 'react'
 import {
   Coffee, Music, PawPrint, Scissors, Shirt, Utensils, BookOpen, BriefcaseBusiness, Gift, HeartPulse, House, Landmark, Laptop, Layers3,
   Plane, ReceiptText, ShoppingBag, ShoppingBasket, Ticket, TrainFront, X, type LucideIcon,
 } from 'lucide-react'
-import { categories, type CategoryId } from '../ledger'
+import { categories, money, type CategoryId } from '../ledger'
 
 const icons: Record<CategoryId, LucideIcon> = {
   food: ShoppingBasket, transport: TrainFront, leisure: Ticket, home: House,
@@ -29,6 +29,33 @@ export function Brand() {
   </span>
 }
 
+export function FittedAmount({ cents, className }: { cents: number, className: string }) {
+  const amount = money(cents)
+  const amountBox = useRef<HTMLDivElement>(null)
+  const amountMeasure = useRef<HTMLSpanElement>(null)
+
+  useLayoutEffect(() => {
+    const box = amountBox.current!
+    const measure = amountMeasure.current!
+    function fit() {
+      const naturalWidth = measure.getBoundingClientRect().width
+      if (!naturalWidth || !box.clientWidth) return
+      const scale = Math.min(1, (box.clientWidth - 1) / naturalWidth)
+      box.style.setProperty('--balance-scale', String(scale))
+    }
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(box)
+    observer.observe(measure)
+    return () => observer.disconnect()
+  }, [amount])
+
+  return <div ref={amountBox} className={className + ' fitted-amount'}>
+    <span ref={amountMeasure} className="fitted-amount-measure money" aria-hidden="true">{amount}</span>
+    <span className="fitted-amount-value money">{amount}</span>
+  </div>
+}
+
 export function AmountInput({ label, value, onChange, selectOnFocus = false }: {
   label: string, value: string, onChange: (value: string) => void, selectOnFocus?: boolean,
 }) {
@@ -52,8 +79,8 @@ export function AmountInput({ label, value, onChange, selectOnFocus = false }: {
   </label>
 }
 
-export function Modal({ title, children, onClose, busy = false, className = '' }: {
-  title: string, children: ReactNode, onClose: () => void, busy?: boolean, className?: string,
+export function Modal({ title, children, onClose, busy = false, className = '', onKeyDown }: {
+  title: string, children: ReactNode, onClose: () => void, busy?: boolean, className?: string, onKeyDown?: KeyboardEventHandler<HTMLDialogElement>,
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -87,7 +114,7 @@ export function Modal({ title, children, onClose, busy = false, className = '' }
       document.body.style.overflow = original
     }
   }, [])
-  return <dialog ref={ref} className={'dialog ' + className} aria-labelledby={titleId}
+  return <dialog ref={ref} className={'dialog ' + className} aria-labelledby={titleId} onKeyDown={onKeyDown}
     onCancel={event => { event.preventDefault(); if (!busy) onClose() }}
     onClick={event => { if (event.target === ref.current && !busy) onClose() }}>
     <div className="sheet">
