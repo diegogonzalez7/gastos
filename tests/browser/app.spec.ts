@@ -111,10 +111,10 @@ test('el libro mensual se calcula, persiste y se corrige desde el historial', as
   await expect(page.locator('.entry-row')).toHaveCount(1)
 })
 
-test('registro rápido, validación, tema y tamaño de pantalla', async ({ page }) => {
-  await page.getByRole('button', { name: 'Registrar en Transporte' }).click()
+test('nuevo movimiento, validación, tema y tamaño de pantalla', async ({ page }) => {
+  await page.getByRole('button', { name: 'Nuevo movimiento' }).click()
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByLabel('Categoría')).toHaveValue('transport')
+  await dialog.getByLabel('Categoría').selectOption('transport')
   await expect(dialog.getByLabel('Importe', { exact: true })).toHaveAttribute('inputmode', 'decimal')
   await dialog.getByLabel('Importe', { exact: true }).fill('-2')
   await dialog.getByLabel('Concepto').fill('Autobús')
@@ -344,7 +344,9 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
 test('un favorito conserva importe y categoría y abre un movimiento con fecha de hoy', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
   await page.reload()
-  await page.getByRole('button', { name: 'Añadir favorito' }).click()
+  const quick = page.getByRole('region', { name: 'Registro rápido' })
+  await expect(quick.getByRole('button')).toHaveCount(1)
+  await quick.getByRole('button', { name: 'Añadir favorito' }).click()
   const favorite = page.getByRole('dialog', { name: 'Nuevo favorito' })
   await favorite.getByLabel('Importe', { exact: true }).fill(',9')
   await favorite.getByLabel('Concepto').fill('Café')
@@ -353,7 +355,8 @@ test('un favorito conserva importe y categoría y abre un movimiento con fecha d
   await balance(page, '0,00€')
   await page.reload()
   await page.getByRole('button', { name: 'Mes anterior' }).click()
-  await page.getByRole('button', { name: /Registrar Café.*0,90/ }).click()
+  await expect(quick.getByRole('button')).toHaveCount(2)
+  await quick.getByRole('button', { name: /Registrar Café.*0,90/ }).click()
   const entry = page.getByRole('dialog', { name: 'Nuevo movimiento' })
   await expect(entry.getByLabel('Importe', { exact: true })).toHaveValue('0,90')
   await expect(entry.getByLabel('Concepto')).toHaveValue('Café')
@@ -570,7 +573,8 @@ test('una restauración detecta cambios posteriores a la vista previa', async ({
 })
 
 test('dos ventanas no sobrescriben una edición ya guardada', async ({ page, context }) => {
-  await page.getByRole('button', { name: 'Registrar en Ropa' }).click()
+  await page.getByRole('button', { name: 'Nuevo movimiento' }).click()
+  await page.getByRole('dialog').getByLabel('Categoría').selectOption('clothes')
   await page.getByLabel('Importe', { exact: true }).fill('30')
   await page.getByLabel('Concepto').fill('Luz')
   await page.getByRole('button', { name: 'Guardar movimiento' }).click()

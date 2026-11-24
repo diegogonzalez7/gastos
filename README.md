@@ -16,7 +16,7 @@ Abre la dirección que muestra Vite en la terminal. Para probar la interfaz desd
 ## Uso
 
 - **Empezar con tus cuentas de septiembre.** En **Resumen → Saldo inicial del banco**, introduce el saldo bancario que tenías justo antes del primer movimiento. Puede ser positivo, cero o negativo. Si lo ajustaste con el cálculo anterior, revísalo tras clasificar los gastos en efectivo.
-- **Registrar.** Pulsa **Nuevo movimiento** o **Nuevo** en el móvil. Elige gasto o ingreso, escribe el importe, añade un concepto si quieres y revisa la categoría y la fecha y pulsa **Guardar movimiento**. Los accesos de **Registro rápido** abren el formulario con la categoría elegida.
+- **Registrar.** Pulsa **Nuevo movimiento** o **Nuevo** en el móvil. Elige gasto o ingreso, escribe el importe, añade un concepto si quieres, revisa la categoría y la fecha y pulsa **Guardar movimiento**.
 - **Fecha y cambios pendientes.** Cuando la fecha corresponde a otro mes, el formulario indica cuál. Toca **Hoy** para usar la fecha actual. Si cierras un formulario con cambios, puedes seguir editándolo o descartarlos.
 - **Efectivo y banco.** En los gastos, selecciona **Pagado desde → Cuenta bancaria** para pagos como tarjeta, Bizum y transferencias, o **Efectivo** si pagaste en metálico. **Máquina Trabajo** siempre cuenta como efectivo, incluidos los movimientos antiguos. Los demás gastos antiguos se consideran bancarios hasta que cambies su forma de pago.
 - **Ingresos.** En **Recibido en**, elige **Cuenta bancaria** o **Efectivo**. Ambos cuentan en los ingresos del mes. El saldo bancario solo incorpora los recibidos en cuenta. Los ingresos antiguos sin forma de cobro se consideran bancarios y puedes editarlos.

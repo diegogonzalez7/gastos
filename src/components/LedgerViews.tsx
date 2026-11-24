@@ -74,14 +74,13 @@ export function Balance({ totals }: { totals: Summary }) {
   </section>
 }
 
-const shortcuts: CategoryId[] = ['food', 'transport', 'meal', 'clothes', 'salary']
-function Shortcuts({ onAdd, favorites, onUseFavorite, onManageFavorites }: Pick<DashboardProps, 'onAdd' | 'favorites' | 'onUseFavorite' | 'onManageFavorites'>) {
+function QuickFavorites({ favorites, onUseFavorite, onManageFavorites }: Pick<DashboardProps, 'favorites' | 'onUseFavorite' | 'onManageFavorites'>) {
   return <section className="quick-section" aria-labelledby="quick-title">
     <div className="quick-heading">
       <h2 id="quick-title">Registro rápido</h2>
       <button className="text-button" onClick={onManageFavorites}><Star size={16} />{favorites.length ? 'Gestionar favoritos' : 'Añadir favorito'}</button>
     </div>
-    {!!favorites.length && <div className="quick-list favorite-list" role="group" aria-label="Movimientos favoritos">
+    {!!favorites.length && <div className="quick-list" role="group" aria-label="Movimientos favoritos">
       {favorites.map(favorite => <button key={favorite.id} className="quick-button favorite-button"
         aria-label={'Registrar ' + favoriteName(favorite) + ' · ' + money(favorite.cents)} onClick={() => onUseFavorite(favorite)}>
         <CategoryBadge category={favorite.category} /><span className="favorite-info">
@@ -89,10 +88,6 @@ function Shortcuts({ onAdd, favorites, onUseFavorite, onManageFavorites }: Pick<
         </span><Plus size={15} aria-hidden="true" />
       </button>)}
     </div>}
-    <div className="quick-list">{shortcuts.map(id => <button key={id} className="quick-button"
-      aria-label={'Registrar en ' + categories[id].name} onClick={() => onAdd(id)}>
-      <CategoryBadge category={id} /><span>{categories[id].name}</span><Plus size={15} aria-hidden="true" />
-    </button>)}</div>
   </section>
 }
 
@@ -151,7 +146,7 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, m
       <div><small>Saldo bancario al cierre</small><strong className="money">{money(account.closing)}</strong></div>
       <div><small>Saldo bancario total</small><strong className="money">{money(account.total)}</strong></div>
     </section>
-    <Shortcuts onAdd={onAdd} favorites={favorites} onUseFavorite={onUseFavorite} onManageFavorites={onManageFavorites} />
+    <QuickFavorites favorites={favorites} onUseFavorite={onUseFavorite} onManageFavorites={onManageFavorites} />
     <div className="overview-panels">
       <section className="panel recent-panel" aria-labelledby="recent-title">
         <div className="panel-heading"><h2 id="recent-title">Últimos movimientos</h2>

@@ -130,3 +130,4 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 
 - El selector ocupa un lugar fijo en la fila superior de Resumen, Movimientos y Categorías. En los anchos más estrechos usa nombres de mes abreviados.
 - Los gastos de favoritos y de Máquina Trabajo muestran la categoría en el historial y conservan su concepto para editarlo o buscarlo. Las copias guardan la presentación de los nuevos gastos creados desde favoritos.
+- Registro rápido muestra solo los favoritos y su opción de gestión. El formulario Nuevo permite elegir la categoría de cualquier movimiento.
