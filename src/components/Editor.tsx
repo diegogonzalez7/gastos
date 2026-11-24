@@ -72,7 +72,7 @@ export function Editor({ draft, onClose, onDuplicate, onRefunds, onSaved, onFavo
     setBusy(true)
     setError('')
     try {
-      const method = kind === 'expense' ? { payment: effectivePayment } : {}
+      const method = kind === 'expense' || effectivePayment === 'cash' ? { payment: effectivePayment } : {}
       if (editingFavorite) {
         const id = oldFavorite?.id ?? newEntryId()
         onFavorite(id, { id, cents, category, concept: concept.trim(), ...method })
@@ -138,8 +138,8 @@ export function Editor({ draft, onClose, onDuplicate, onRefunds, onSaved, onFavo
         maxLength={MAX_CONCEPT} value={concept} onChange={e => setConcept(e.target.value)} /></label>
       {kind !== 'withdrawal' && <label className="field">Categoría<select value={category} onChange={e => setCategory(e.target.value as CategoryId)}>
         {(categoryIds.includes(category) ? categoryIds : [category, ...categoryIds]).filter(id => categories[id].kind === kind).map(id => <option key={id} value={id}>{categories[id].name}</option>)}</select></label>}
-      {kind === 'expense' && <div className="field">
-        <span id={paymentLabelId}>Pagado desde</span>
+      {kind !== 'withdrawal' && <div className="field">
+        <span id={paymentLabelId}>{kind === 'income' ? 'Recibido en' : 'Pagado desde'}</span>
         <div className="kind-switch payment-switch" role="group" aria-labelledby={paymentLabelId}
           aria-describedby={category === 'machine' ? machineHintId : undefined}>
           <button type="button" aria-pressed={effectivePayment === 'bank'} disabled={category === 'machine'} onClick={() => setPayment('bank')}>Cuenta bancaria</button>

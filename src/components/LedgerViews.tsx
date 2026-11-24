@@ -14,7 +14,7 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
   const category = displayCategory(entry.category)
   const title = entry.concept || categories[category].name
   const description = useId()
-  const paymentLabel = entry.kind === 'expense' ? (paymentSource(entry) === 'cash' ? ' · Efectivo' : ' · Cuenta bancaria') : ''
+  const paymentLabel = entry.kind === 'withdrawal' ? '' : paymentSource(entry) === 'cash' ? ' · Efectivo' : ' · Cuenta bancaria'
   const detail = entry.concept || entry.kind === 'withdrawal' ? categories[category].name : incoming ? 'Ingreso' : 'Gasto'
   return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + title}
     aria-describedby={description + '-category ' + description + '-amount'}>

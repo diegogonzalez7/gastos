@@ -64,7 +64,8 @@ export function refundedCents(entry: Entry) {
 export const netExpense = (entry: Entry) => entry.cents - refundedCents(entry)
 
 export function paymentSource({ category, payment }: Pick<Entry, 'category' | 'payment'>): PaymentSource {
-  return category === 'machine' || (categories[category].kind === 'expense' && payment === 'cash') ? 'cash' : 'bank'
+  if (category === 'withdrawal') return 'bank'
+  return category === 'machine' ? 'cash' : payment ?? 'bank'
 }
 
 export function newEntryId(): string {
@@ -223,7 +224,7 @@ function readEntry(value: unknown, version: number): Entry {
       || typeof cents !== 'number' || !Number.isSafeInteger(cents) || cents <= 0 || cents > MAX_CENTS
       || typeof category !== 'string' || !Object.hasOwn(categories, category)
       || categories[category as CategoryId].kind !== kind
-      || (payment !== undefined && (kind !== 'expense' || (payment !== 'cash' && payment !== 'bank')))
+      || (payment !== undefined && ((kind !== 'expense' && !(kind === 'income' && version >= 5)) || (payment !== 'cash' && payment !== 'bank')))
       || (refunds !== undefined && (kind !== 'expense' || version < 4))
       || typeof concept !== 'string' || concept.length > MAX_CONCEPT
       || !validDay(date) || typeof createdAt !== 'number' || !Number.isSafeInteger(createdAt) || createdAt < 0) {
@@ -236,10 +237,13 @@ function readEntry(value: unknown, version: number): Entry {
 }
 
 export function makeBackup({ entries, openingCents, reminders }: Ledger) {
-  const version = entries.some(entry => entry.refunds?.length) ? 4 : 3
-  const transactions = entries.map(entry => entry.kind === 'expense' ? {
-    ...entry, payment: paymentSource(entry), refunds: entry.refunds?.length ? entry.refunds : undefined,
-  } : entry)
+  const transactions = entries.map<Entry>(({ payment, ...entry }) => {
+    const source = paymentSource({ category: entry.category, payment })
+    if (entry.kind === 'expense') return { ...entry, payment: source, refunds: entry.refunds?.length ? entry.refunds : undefined }
+    return source === 'cash' ? { ...entry, payment: source } : entry
+  })
+  const version = transactions.some(entry => entry.kind === 'income' && entry.payment === 'cash') ? 5
+    : transactions.some(entry => entry.refunds?.length) ? 4 : 3
   return { app: 'mi-dinero', version, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions, reminders }
 }
 
@@ -248,7 +252,7 @@ export function readBackup(text: string): Ledger {
   try { data = JSON.parse(text) } catch { throw new Error('El archivo no contiene JSON válido.') }
   if (!record(data) || data.app !== 'mi-dinero') throw new Error('Selecciona una copia creada con Mi Dinero.')
   const { version } = data
-  if ((version !== 1 && version !== 2 && version !== 3 && version !== 4) || data.currency !== 'EUR') throw new Error('La versión o la moneda de esta copia es incompatible.')
+  if ((version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5) || data.currency !== 'EUR') throw new Error('La versión o la moneda de esta copia es incompatible.')
   if (!Array.isArray(data.transactions)) throw new Error('Falta la lista de movimientos en la copia.')
   const entries = data.transactions.map(value => readEntry(value, version))
   if (new Set(entries.map(entry => entry.id)).size !== entries.length) throw new Error('La copia contiene movimientos duplicados.')

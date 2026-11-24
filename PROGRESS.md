@@ -120,3 +120,8 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - Los gastos admiten reembolsos parciales o completos con fecha y forma de cobro propias. Se pueden consultar, editar y eliminar desde el historial o desde el gasto.
 - El gasto neto se refleja en el mes y la categoría de la compra. Un reembolso bancario afecta al saldo en su fecha de cobro. Los reembolsos aparecen como movimientos separados en su mes.
 - Las copias incluyen los reembolsos y se siguen leyendo los formatos anteriores. Las pruebas cubren pagos y reembolsos en efectivo o banco, cambios de mes y validación de importes.
+
+## Ingresos en efectivo
+
+- Los ingresos y favoritos tienen el selector Recibido en. Los ingresos en efectivo cuentan en el balance mensual y quedan fuera del saldo bancario. Los ingresos antiguos conservan el tratamiento bancario.
+- Las copias conservan la forma de cobro y se pueden restaurar en la versión actual junto con los formatos anteriores. Las pruebas cubren favoritos, edición, saldo y restauración de ingresos en efectivo.

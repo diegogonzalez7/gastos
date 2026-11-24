@@ -58,7 +58,7 @@ test('una copia dañada, incompatible o duplicada se rechaza entera', () => {
     { category: 'salary' }, { category: '__proto__' }, { date: '2024-02-31' }, { id: 'x' }, { createdAt: -1 }, { payment: 'card' },
   ]) assert.throws(() => readBackup(JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), transactions: [income, { ...expense, ...patch }] })))
   for (const text of ['{', 'null', '{}', JSON.stringify(makeBackup({ entries: [expense, expense], openingCents: 0 })),
-    JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), version: 5 }), JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), currency: 'USD' })]) {
+    JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), version: 6 }), JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), currency: 'USD' })]) {
     assert.throws(() => readBackup(text))
   }
 })
@@ -112,6 +112,19 @@ test('el saldo inicial se arrastra una vez, incluso en meses sin movimientos', (
   assert.equal(parseOpening('0'), 0)
   assert.equal(parseOpening(''), null)
   assert.equal(parseOpening('-1,234'), null)
+})
+
+test('el ingreso en efectivo suma al mes y se conserva en copias sin aumentar el saldo bancario', () => {
+  const cash: Entry = { ...income, id: '66666666-6666-4666-8666-666666666666', category: 'gift', cents: 2000, payment: 'cash' }
+  const ledger = { entries: [income, cash], openingCents: 10000 }
+  assert.deepEqual(accountBalances(ledger, '2024-02'), { closing: 30000, total: 30000 })
+  assert.equal(summarize(ledger.entries).income, 22000)
+  const copy = makeBackup(ledger)
+  assert.equal(copy.version, 5)
+  assert.deepEqual(readBackup(JSON.stringify(copy)), ledger)
+  assert.throws(() => readBackup(JSON.stringify({ ...copy, version: 4 })))
+  assert.equal(makeBackup({ ...ledger, entries: [{ ...income, payment: 'bank' }] }).version, 3)
+  assert.deepEqual(compareEntries([{ ...cash, payment: 'bank' }], [cash]), { added: 0, changed: 1, removed: 0 })
 })
 
 test('se restauran las copias anteriores y los conceptos vacíos', () => {
