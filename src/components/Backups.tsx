@@ -3,6 +3,7 @@ import { Download, FileCheck2, FolderOpen, HardDrive, Share2, Upload } from 'luc
 import { downloadFile } from '../files'
 import { calendarDay, dateLabel, makeBackup, monthLabel, readBackup, money, validDay, type Ledger } from '../ledger'
 import { readLedger, restoreLedger, storageMessage } from '../storage'
+import { CloudBackups } from './CloudBackups'
 import { Modal } from './ui'
 
 const lastExportKey = 'mi-dinero:last-export'
@@ -37,6 +38,7 @@ export function Backups({ ledger, onClose, onRestored }: {
   ledger: Ledger | null, onClose: () => void, onRestored: () => void,
 }) {
   const [busy, setBusy] = useState(false)
+  const [cloudBusy, setCloudBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [lastExport, setLastExport] = useState(readLastExport)
@@ -86,13 +88,30 @@ export function Backups({ ledger, onClose, onRestored }: {
     setBusy(true)
     setError('')
     setNotice('')
-    try {
-      let ledger: Ledger
-      try { ledger = readBackup(await file.text()) }
-      catch (err) { setError(err instanceof Error ? err.message : 'No se ha podido leer la copia.'); return }
-      setPreview({ file: file.name, ledger, current: await readLedger(), months: monthRange(ledger.entries) })
-    } catch (err) { setError(storageMessage(err)) }
+    try { await review(file.name, await file.text()) }
+    catch (err) { setError(err instanceof Error ? err.message : 'No se ha podido leer la copia.') }
     finally { setBusy(false) }
+  }
+
+  async function latestLedger() {
+    try { return await readLedger() }
+    catch (err) { throw new Error(storageMessage(err)) }
+  }
+
+  async function review(file: string, text: string) {
+    const ledger = readBackup(text)
+    setPreview({ file, ledger, current: await latestLedger(), months: monthRange(ledger.entries) })
+  }
+
+  async function runCloud(operation: () => Promise<void>) {
+    if (busy) return
+    setBusy(true)
+    setCloudBusy(true)
+    setError('')
+    setNotice('')
+    try { await operation() }
+    catch (err) { setError(err instanceof Error ? err.message : 'No se ha podido completar la operación en Dropbox.') }
+    finally { setBusy(false); setCloudBusy(false) }
   }
 
   async function restore() {
@@ -104,7 +123,7 @@ export function Backups({ ledger, onClose, onRestored }: {
   }
 
   return <Modal title={preview ? 'Confirmar restauración' : 'Copias de seguridad'} onClose={onClose} busy={busy}>
-    {preview ? <div className="confirm-panel">
+    {preview && <div className="confirm-panel">
       <div className="file-preview"><FileCheck2 size={23} /><strong>{preview.file}</strong></div>
       <p>La copia contiene <strong>{preview.ledger.entries.length} {preview.ledger.entries.length === 1 ? 'movimiento' : 'movimientos'}</strong>.
         Al restaurarla se reemplazará todo el historial de este dispositivo, que ahora contiene {preview.current.entries.length}.</p>
@@ -120,10 +139,13 @@ export function Backups({ ledger, onClose, onRestored }: {
         <button className="secondary" disabled={busy} onClick={() => { setPreview(null); setError(''); setNotice('') }}>Cancelar</button>
         <button className="primary" disabled={busy} onClick={restore}>{busy ? 'Restaurando…' : 'Restaurar copia'}</button>
       </div>
-    </div> : <div className="backup-options">
-      <p className="local-note"><HardDrive size={19} />Tus movimientos se guardan en este dispositivo. Conserva una copia para recuperarlos o llevarlos a otro móvil.</p>
+    </div>}
+    <div hidden={!!preview}><div className="backup-options">
+      <p className="local-note"><HardDrive size={19} />Tus movimientos se guardan en este dispositivo. Conserva una copia para recuperarlos o llevarlos a otro dispositivo.</p>
+      <CloudBackups busy={busy} run={runCloud} makeFile={async () => backupFile(await latestLedger())} review={review}
+        onUploaded={() => recordExport('Copia subida a la carpeta privada de Dropbox.')} />
       <div className="backup-option"><span className="utility-icon"><Download size={21} /></span>
-        <div><h3>Exportar copia</h3><p>Guarda tus movimientos, saldo inicial y recordatorios en un archivo JSON. Puedes usar iCloud Drive para abrirlo en otro dispositivo.</p>
+        <div><h3>Exportar copia</h3><p>Guarda tus movimientos, saldo inicial y recordatorios en un archivo JSON.</p>
           {lastExport && <p>Última exportación: <time dateTime={lastExport}>{dateLabel(lastExport, { dateStyle: 'long' })}</time></p>}
           <div className="backup-actions">
             <button className="secondary" disabled={busy} onClick={() => download()}><Download size={16} />Descargar copia</button>
@@ -136,8 +158,9 @@ export function Backups({ ledger, onClose, onRestored }: {
           <label className={'secondary file-button' + (busy ? ' disabled' : '')}><FolderOpen size={16} />Elegir archivo
             <input type="file" aria-label="Archivo de copia" accept=".json,application/json" disabled={busy} onChange={chooseFile} /></label></div>
       </div>
-    </div>}
-    {error && <p className="form-error" role="alert">{error}</p>}
+    </div></div>
+    {cloudBusy && <p className="export-notice" role="status">Procesando solicitud de Dropbox…</p>}
+    {error && <p className="form-error backup-feedback" role="alert">{error}</p>}
     {notice && <p className="export-notice" role="status">{notice}</p>}
   </Modal>
 }

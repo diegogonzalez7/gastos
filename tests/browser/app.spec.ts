@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type BrowserContext, type Page } from '@playwright/test'
+import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 
 async function navigate(page: Page, label: string) {
@@ -173,6 +174,127 @@ test('la PWA abre bajo una subruta y el libro funciona sin red', async ({ page, 
   await newPage.getByRole('button', { name: 'Elegir periodo' }).click()
   await newPage.getByRole('button', { name: 'Todos los meses' }).click()
   await expect(newPage.getByRole('button', { name: 'Editar Sin conexión' })).toBeVisible()
+})
+
+test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos', async ({ page, context, browser, baseURL }) => {
+  const appKey = 'mi-dinero-pruebas'
+  const challenges = new Map<string, string>()
+  const cloud = new Map<string, { name: string, server_modified: string, contents: string }>()
+
+  async function fakeDropbox(target: BrowserContext) {
+    await target.route('https://api.dropboxapi.com/oauth2/token', async route => {
+      const body = new URLSearchParams(route.request().postData() ?? '')
+      expect(body.get('client_id')).toBe(appKey)
+      expect(body.has('client_secret')).toBe(false)
+      if (body.get('grant_type') === 'authorization_code') {
+        const verifier = body.get('code_verifier') ?? ''
+        const challenge = createHash('sha256').update(verifier).digest('base64url')
+        expect(challenge).toBe(challenges.get(body.get('code')!))
+        await route.fulfill({ json: { refresh_token: 'refresh-token-pruebas' } })
+      } else {
+        expect(body.get('grant_type')).toBe('refresh_token')
+        expect(body.get('refresh_token')).toBe('refresh-token-pruebas')
+        await route.fulfill({ json: { access_token: 'access-token-pruebas' } })
+      }
+    })
+    await target.route(/^https:\/\/(?:api|content)\.dropboxapi\.com\/2\/files\//, async route => {
+      const request = route.request()
+      expect(request.headers().authorization).toBe('Bearer access-token-pruebas')
+      const endpoint = new URL(request.url()).pathname.split('/2/files/')[1]
+      if (endpoint.startsWith('list_folder')) {
+        const next = endpoint.endsWith('/continue')
+        expect(request.postDataJSON()).toEqual(next ? { cursor: 'test-cursor' } : { path: '', limit: 100 })
+        const entries = Array.from(cloud, ([id, { name, server_modified }]) => ({ '.tag': 'file', id, name, server_modified }))
+        await route.fulfill({ json: {
+          entries: next ? entries.slice(1) : [{ '.tag': 'file', id: 'otro', name: 'otro.json' }, ...entries.slice(0, 1)],
+          has_more: !next && entries.length > 1, cursor: 'test-cursor',
+        } })
+      } else {
+        const args = JSON.parse(request.headers()['dropbox-api-arg'])
+        if (endpoint === 'upload') {
+          expect(args.mode).toBe('add')
+          const id = 'id:copy-' + (cloud.size + 1)
+          const name = args.path.slice(1)
+          expect(name).toMatch(/^mi-dinero-\S+\.json$/)
+          expect(Array.from(cloud.values()).some(file => file.name === name)).toBe(false)
+          const server_modified = new Date(Date.UTC(2026, 10, 24, 12, cloud.size)).toISOString()
+          cloud.set(id, { name, server_modified, contents: request.postData()! })
+          await route.fulfill({ json: { id, name, server_modified } })
+        } else {
+          expect(endpoint).toBe('download')
+          await route.fulfill({ body: cloud.get(args.path)!.contents, contentType: 'application/octet-stream' })
+        }
+      }
+    })
+  }
+
+  async function connect(target: Page, code: string) {
+    await backups(target)
+    await target.getByRole('button', { name: 'Conectar con Dropbox' }).click()
+    await target.getByLabel('App key de Dropbox').fill(appKey)
+    await target.getByRole('button', { name: 'Continuar', exact: true }).click()
+    const url = new URL((await target.getByRole('link', { name: 'Abrir Dropbox' }).getAttribute('href'))!)
+    expect(url.origin).toBe('https://www.dropbox.com')
+    expect(url.searchParams.get('code_challenge_method')).toBe('S256')
+    expect(url.searchParams.get('token_access_type')).toBe('offline')
+    challenges.set(code, url.searchParams.get('code_challenge')!)
+    await target.getByLabel('Código de Dropbox').fill(code)
+    await target.getByRole('button', { name: 'Conectar cuenta' }).click()
+    await expect(target.getByRole('button', { name: 'Buscar copias en la nube' })).toBeVisible()
+  }
+
+  await fakeDropbox(context)
+  const other = await browser.newContext({ baseURL, serviceWorkers: 'block', locale: 'es-ES', timezoneId: 'Europe/Madrid' })
+  try {
+    await fakeDropbox(other)
+    const second = await other.newPage()
+    await second.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
+    await second.goto('./')
+    await connect(page, 'codigo-iphone')
+    await page.getByRole('button', { name: 'Buscar copias en la nube' }).click()
+    await expect(page.getByText('Todavía no hay copias guardadas')).toBeVisible()
+    await page.getByRole('button', { name: 'Cerrar' }).click()
+    await add(page, 'Café desde el móvil', '0,90', '2026-11-24', 'machine')
+    await backups(page)
+    const upload = (target: Page) => target.getByRole('button', { name: 'Subir copia a la nube' }).click()
+    await upload(page)
+    await expect(page.getByText('Copia subida a la carpeta privada de Dropbox.')).toBeVisible()
+
+    await connect(second, 'codigo-pc')
+    const openLatest = async (target: Page, count: number) => {
+      await target.getByRole('button', { name: 'Buscar copias en la nube' }).click()
+      const list = target.getByRole('list', { name: 'Copias guardadas en Dropbox' }).getByRole('button')
+      await expect(list).toHaveCount(count)
+      await expect(list.first()).toContainText(Array.from(cloud.values()).at(-1)!.name)
+      await list.first().click()
+      await expect(target.getByRole('dialog', { name: 'Confirmar restauración' })).toBeVisible()
+    }
+    await openLatest(second, 1)
+    await balance(second, '0,00€')
+    await second.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+    await expect(second.getByRole('button', { name: 'Editar Café desde el móvil' })).toBeVisible()
+    await add(second, 'Comida desde el PC', '9', '2026-11-24', 'meal')
+    await backups(second)
+    await upload(second)
+    await expect(second.getByText('Copia subida a la carpeta privada de Dropbox.')).toBeVisible()
+
+    await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
+    await page.reload()
+    await backups(page)
+    await openLatest(page, 2)
+    await expect(page.getByText('La copia contiene')).toContainText('2 movimientos')
+    await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
+    await expect(page.getByRole('list', { name: 'Copias guardadas en Dropbox' })).toBeVisible()
+    await openLatest(page, 2)
+    await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Editar Comida desde el PC' })).toBeVisible()
+    await backups(page)
+    await page.getByRole('button', { name: 'Desconectar Dropbox en este dispositivo' }).click()
+    await expect(page.getByRole('button', { name: 'Conectar con Dropbox' })).toBeVisible()
+    expect(cloud.size).toBe(2)
+  } finally {
+    await other.close()
+  }
 })
 
 test('editar el tipo y la fecha traslada el importe al mes correcto', async ({ page }) => {

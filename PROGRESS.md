@@ -95,3 +95,10 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - El selector de Apariencia ofrece Original, Medianoche, Grafito, Ciruela y Arena, con una vista previa de cada diseño.
 - La elección se guarda en el dispositivo y se aplica desde el arranque. Original conserva el ajuste de color del sistema, claro u oscuro que se usaba antes.
 - La prueba de navegador comprueba los cuatro diseños, la persistencia de la elección y que los movimientos siguen disponibles al cambiar de diseño.
+
+## Copias en la nube con Dropbox
+
+- Conexión opcional desde Copias de seguridad a una carpeta privada de Dropbox con autorización PKCE y una App key de uso personal.
+- Cada subida crea un archivo independiente. Las copias se pueden buscar y abrir en cualquier dispositivo conectado a la misma cuenta con la misma App key.
+- La restauración de Dropbox comparte la validación, la vista previa y la confirmación de las copias locales.
+- La prueba de navegador simula Dropbox para verificar la transferencia en ambas direcciones y la selección entre varias copias. Queda pendiente conectar una cuenta real desde un iPhone.

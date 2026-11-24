@@ -36,7 +36,16 @@ Para recuperar el historial, pulsa **Elegir archivo** y revisa el número de mov
 
 Cada origen web, perfil del navegador o dispositivo puede tener su propio almacén. Exporta una copia antes de cambiar de móvil, dominio o navegador, o de borrar los datos del sitio. Puedes usarla en la app instalada si esta abre un historial vacío.
 
-Para pasar la copia entre el iPhone y el ordenador, usa una carpeta en iCloud Drive. En el iPhone, elige **Compartir copia → Guardar en Archivos → iCloud Drive**. En el ordenador puedes elegir ese JSON en iCloud Drive o descargarlo desde iCloud.com. Para llevarla del ordenador al iPhone, guarda el JSON del ordenador en esa carpeta y selecciónalo desde **Elegir archivo** en el móvil. Si tienes un Mac, también puedes enviar el archivo con AirDrop. La transferencia es manual y la restauración reemplaza los datos de la copia en el dispositivo de destino.
+### Copias en Dropbox desde iPhone y Windows
+
+Mi Dinero usa una carpeta privada de Dropbox. Puedes usar una cuenta gratuita y acceder desde el navegador o la app instalada. Las copias subidas son archivos JSON legibles en tu Dropbox y cada subida crea un archivo nuevo. El historial de trabajo se sigue guardando en el dispositivo.
+
+1. En el ordenador abre la [consola de aplicaciones de Dropbox](https://www.dropbox.com/developers/apps) con la cuenta con la que guardarás las copias. Crea una aplicación con **Scoped access** y **App folder**. Elige un nombre único, por ejemplo `Copias Mi Dinero Diego`.
+2. En **Permissions**, marca `files.metadata.read`, `files.content.read` y `files.content.write`. Pulsa **Submit** para guardar. En **Settings**, copia **App key**. Para configurar Mi Dinero solo necesitas la **App key**. Conserva el **App secret** en Dropbox.
+3. En **Copias de seguridad → Conectar con Dropbox**, pega la **App key** y pulsa **Continuar → Abrir Dropbox**. Autoriza el acceso, copia el código que te muestra Dropbox y vuelve a Mi Dinero para pegarlo y pulsar **Conectar cuenta**. Hazlo una vez en cada dispositivo con la misma App key y cuenta. El paso del código permite volver a la PWA instalada desde el navegador que abre Dropbox en el iPhone.
+4. En el dispositivo de origen, pulsa **Subir copia a la nube**. En el otro, pulsa **Buscar copias en la nube**, elige la copia por fecha y revisa la vista previa. **Restaurar copia** reemplaza el historial local tras confirmarlo. Puedes descargar una copia del historial actual desde esa misma vista.
+
+Puedes usar **Desconectar Dropbox en este dispositivo** al acabar, especialmente en un ordenador compartido. Las copias siguen accesibles en la carpeta de la aplicación en Dropbox. Para transferencias manuales siguen disponibles **Descargar copia**, **Compartir copia** y **Elegir archivo**.
 
 ## Recordatorios
 
