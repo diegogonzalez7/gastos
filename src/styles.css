@@ -276,6 +276,15 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .restore-comparison dd { margin: 0; font-variant-numeric: tabular-nums; font-size: 19px; font-weight: 670; }
 .restore-comparison .restore-removals { color: var(--danger); background: var(--danger-bg); }
 .restore-comparison .restore-removals dt { color: inherit; }
+.refund-subject { color: var(--secondary); overflow-wrap: anywhere; }
+.refund-panel .restore-comparison dd { font-size: clamp(13px, 3.5vw, 17px); overflow-wrap: anywhere; }
+.refund-entry-action, .refund-list { display: grid; gap: 8px; }
+.refund-entry-action .secondary { justify-self: start; }
+.refund-list { margin-bottom: 14px; }
+.refund-list button { justify-content: flex-start; text-align: left; }
+.refund-list button > span { display: grid; gap: 3px; }
+.refund-list button > svg:last-child { margin-inline-start: auto; }
+.refund-list small { color: var(--secondary); font-size: 12px; }
 .action-row, .calendar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 .year-control { margin-bottom: 8px; }
 .month-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }

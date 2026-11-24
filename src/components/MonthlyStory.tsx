@@ -1,6 +1,6 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, CirclePlay, Wallet } from 'lucide-react'
-import { categories, dateLabel, displayCategory, money, monthLabel, percent } from '../ledger'
+import { categories, dateLabel, displayCategory, money, monthLabel, netExpense, percent } from '../ledger'
 import type { MonthlyReport } from '../monthlyReport'
 import { CategoryBadge, FittedAmount, Modal } from './ui'
 import './monthly-story.css'
@@ -62,7 +62,7 @@ function storySlides({ month, totals, closing, movementCount, expenseCount, spen
     slides.push({
       title: 'Tu mayor gasto', tone: 'expense',
       content: <>
-        <FittedAmount cents={largestExpense.cents} className="story-amount" />
+        <FittedAmount cents={netExpense(largestExpense)} className="story-amount" />
         <p className="story-highlight">{largestExpense.concept || categories[category].name}</p>
         <p className="story-detail">{dateLabel(largestExpense.date, { day: 'numeric', month: 'long' })}</p>
         <p className="story-caption">

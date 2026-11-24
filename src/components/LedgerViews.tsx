@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import {
   capitalize, categories, categoryIds, dateLabel, displayCategory, money, paymentSource, percent, searchText,
-  type CategoryId, type Entry, type Kind, type Summary,
+  type CategoryId, type Entry, type Kind, type Refund, type Summary,
 } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
 import { CategoryBadge, EmptyState, FittedAmount, Modal } from './ui'
@@ -24,6 +24,33 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
     </small></span>
     <span className={'entry-value money' + (incoming ? ' positive' : '')} id={description + '-amount'}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
     <ChevronRight className="entry-chevron" size={15} />
+  </button>
+}
+
+type Movement = { entry: Entry, date: string, refund?: Refund }
+
+function movementRows(entries: Entry[], month: string | null) {
+  const rows: Movement[] = []
+  for (const entry of entries) {
+    if (month === null || entry.date.startsWith(month)) rows.push({ entry, date: entry.date })
+    for (const refund of entry.refunds ?? []) {
+      if (month === null || refund.date.startsWith(month)) rows.push({ entry, date: refund.date, refund })
+    }
+  }
+  return rows.sort((a, b) => b.date.localeCompare(a.date) || b.entry.createdAt - a.entry.createdAt)
+}
+
+function MovementRow({ movement: { entry, refund }, onEdit, onEditRefund, showDate }: {
+  movement: Movement, onEdit: (entry: Entry) => void, onEditRefund: (entry: Entry, refund: Refund) => void, showDate?: boolean,
+}) {
+  if (!refund) return <EntryRow entry={entry} onEdit={onEdit} showDate={showDate} />
+  const category = displayCategory(entry.category)
+  const title = 'Reembolso · ' + (entry.concept || categories[category].name)
+  return <button className="entry-row" onClick={() => onEditRefund(entry, refund)} aria-label={'Editar ' + title}>
+    <CategoryBadge category={category} />
+    <span className="entry-info"><strong>{title}</strong><small>{refund.payment === 'cash' ? 'Efectivo' : 'Cuenta bancaria'}
+      {showDate && ' · ' + dateLabel(refund.date, { day: 'numeric', month: 'short' })}</small></span>
+    <span className="entry-value money positive">+{money(refund.cents)}</span><ChevronRight className="entry-chevron" size={15} />
   </button>
 }
 
@@ -101,8 +128,10 @@ interface DashboardProps {
   onOpening: () => void
   totals: Summary
   entries: Entry[]
+  month: string
   onAdd: (category?: CategoryId) => void
   onEdit: (entry: Entry) => void
+  onEditRefund: (entry: Entry, refund: Refund) => void
   onHistory: (category?: CategoryId) => void
   onCategories: () => void
   favorites: Favorite[]
@@ -110,7 +139,8 @@ interface DashboardProps {
   onManageFavorites: () => void
 }
 
-export function Dashboard({ account, openingCents, onOpening, totals, entries, onAdd, onEdit, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
+export function Dashboard({ account, openingCents, onOpening, totals, entries, month, onAdd, onEdit, onEditRefund, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
+  const recent = movementRows(entries, month).slice(0, 5)
   return <div className="view-stack">
     <Balance totals={totals} />
     <section className="panel account-strip" aria-label="Saldos de la cuenta">
@@ -123,8 +153,8 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, o
       <section className="panel recent-panel" aria-labelledby="recent-title">
         <div className="panel-heading"><h2 id="recent-title">Últimos movimientos</h2>
           <button className="text-button" onClick={() => onHistory()}>Ver todos <ArrowRight size={15} /></button></div>
-        {entries.length ? <div className="entry-list">
-          {entries.slice(0, 5).map(entry => <EntryRow key={entry.id} entry={entry} onEdit={onEdit} showDate />)}
+        {recent.length ? <div className="entry-list">
+          {recent.map(row => <MovementRow key={row.entry.id + (row.refund?.id ?? '')} movement={row} onEdit={onEdit} onEditRefund={onEditRefund} showDate />)}
         </div> : <EmptyState title="Aún no hay movimientos" description="Registra un ingreso o un gasto para empezar este mes."
           action={<button className="text-button" onClick={() => onAdd()}><Plus size={15} />Añadir movimiento</button>} />}
       </section>
@@ -145,20 +175,23 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, o
   </div>
 }
 
-export function History({ entries, category, onClearCategory, onEdit, onAdd }: {
-  entries: Entry[], category: CategoryId | null, onClearCategory: () => void,
-  onEdit: (entry: Entry) => void, onAdd: () => void,
+export function History({ entries, month, category, onClearCategory, onEdit, onEditRefund, onAdd }: {
+  entries: Entry[], month: string | null, category: CategoryId | null, onClearCategory: () => void,
+  onEdit: (entry: Entry) => void, onEditRefund: (entry: Entry, refund: Refund) => void, onAdd: () => void,
 }) {
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<Kind | 'all'>('all')
   const keyword = searchText(query)
-  const rows = entries.filter(entry => (kind === 'all' || entry.kind === kind) && (!category || displayCategory(entry.category) === category) &&
-    (!keyword || searchText(entry.concept + ' ' + categories[displayCategory(entry.category)].name).includes(keyword)))
-  const grouped = new Map<string, Entry[]>()
-  for (const entry of rows) {
-    const group = grouped.get(entry.date) ?? []
-    group.push(entry)
-    grouped.set(entry.date, group)
+  const rows = movementRows(entries, month).filter(({ entry, refund }) => {
+    const displayed = displayCategory(entry.category)
+    return (kind === 'all' || (!refund && entry.kind === kind)) && (!category || displayed === category) &&
+      (!keyword || searchText([entry.concept, categories[displayed].name, refund ? 'Reembolso' : ''].join(' ')).includes(keyword))
+  })
+  const grouped = new Map<string, Movement[]>()
+  for (const row of rows) {
+    const group = grouped.get(row.date) ?? []
+    group.push(row)
+    grouped.set(row.date, group)
   }
   const filtered = Boolean(keyword || category || kind !== 'all')
   function reset() { setQuery(''); setKind('all'); onClearCategory() }
@@ -175,7 +208,7 @@ export function History({ entries, category, onClearCategory, onEdit, onAdd }: {
       <ListFilter size={14} />{categories[category].name}<X size={14} /></button>}
     {rows.length ? [...grouped].map(([day, group]) => <div className="date-group" key={day}>
       <h2>{capitalize(dateLabel(day, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</h2>
-      {group.map(entry => <EntryRow key={entry.id} entry={entry} onEdit={onEdit} />)}
+      {group.map(row => <MovementRow key={row.entry.id + (row.refund?.id ?? '')} movement={row} onEdit={onEdit} onEditRefund={onEditRefund} />)}
     </div>) : <EmptyState title={filtered ? 'Sin resultados' : 'Aún no hay movimientos'}
       description={filtered ? 'Prueba otro concepto, categoría o tipo de movimiento.' : 'Añade un movimiento o elige otro periodo.'}
       action={<button className="text-button" onClick={filtered ? reset : onAdd}>{filtered ? 'Quitar filtros' : 'Añadir movimiento'}<ArrowRight size={15} /></button>} />}

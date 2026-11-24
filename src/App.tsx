@@ -4,13 +4,14 @@ import {
   List, MonitorSmartphone, Moon, Palette, PieChart, Plus, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
-  accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry,
+  accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
 } from './ledger'
 import { readLedger, storageMessage, watchEntries } from './storage'
 import { Brand, Modal } from './components/ui'
 import { Backups } from './components/Backups'
 import { MonthControl } from './components/Calendar'
 import { OpeningBalance } from './components/OpeningBalance'
+import { Refunds } from './components/Refunds'
 import { Editor, type EditorDraft } from './components/Editor'
 import { CategoryView, Dashboard, FavoriteManager, History } from './components/LedgerViews'
 import { favoritesKey, readFavorites, saveFavorite, type Favorite } from './favorites'
@@ -73,6 +74,7 @@ export default function App() {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState('')
   const [editor, setEditor] = useState<EditorDraft | null>(null)
+  const [refundDialog, setRefundDialog] = useState<{ entry: Entry, selected?: Refund } | null>(null)
   const [favorites, setFavorites] = useState(readFavorites)
   const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | 'monthly-alert' | 'designs' | 'favorites' | null>(null)
   const [storyMonth, setStoryMonth] = useState<string | null>(null)
@@ -158,7 +160,7 @@ export default function App() {
   const lastClosedMonth = shiftMonth(currentMonth, -1)
   const reportLinkMonth = month < currentMonth ? month : lastClosedMonth
   const unreadReport = reportLinkMonth === lastClosedMonth && seenReport !== lastClosedMonth &&
-    entries.some(entry => entry.date.startsWith(lastClosedMonth))
+    entries.some(entry => entry.date.startsWith(lastClosedMonth) || entry.refunds?.some(refund => refund.date.startsWith(lastClosedMonth)))
   const report = useMemo(() => storyMonth ? monthlyReport(entries, openingCents, storyMonth) : null, [entries, openingCents, storyMonth])
   const wholeHistory = page === 'movimientos' && allMonths
   function notify(label: string) { setToast({ label }) }
@@ -185,6 +187,10 @@ export default function App() {
     setEditor({ date, category: id })
   }
   function edit(entry: Entry) { setEditor({ date: entry.date, original: entry }) }
+  function openRefunds(entry: Entry, selected?: Refund) {
+    setEditor(null)
+    setRefundDialog({ entry, selected })
+  }
   function editFavorite(favorite?: Favorite) {
     setUtility(null)
     setEditor({ date: calendarDay(), favorite, mode: 'favorite' })
@@ -248,13 +254,14 @@ export default function App() {
           : loadState === 'ready' && <div key={page} className="page-content">
             {page === 'resumen' ? <>
               <div className="monthly-story-entry"><MonthlyStoryLink month={reportLinkMonth} unread={unreadReport} onClick={openMonthlyStory} /></div>
-              <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={monthEntries} totals={totals} onAdd={add} onEdit={edit}
+              <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={entries} month={month}
+                totals={totals} onAdd={add} onEdit={edit} onEditRefund={openRefunds}
                 favorites={favorites} onUseFavorite={favorite => setEditor({ date: calendarDay(), favorite })}
                 onManageFavorites={() => favorites.length ? setUtility('favorites') : editFavorite()}
                 onHistory={showHistory} onCategories={() => goTo('categorias')} />
             </>
-            : page === 'movimientos' ? <History entries={wholeHistory ? entries : monthEntries} category={category} onClearCategory={() => setCategory(null)}
-              onEdit={edit} onAdd={add} />
+            : page === 'movimientos' ? <History entries={entries} month={wholeHistory ? null : month} category={category} onClearCategory={() => setCategory(null)}
+              onEdit={edit} onEditRefund={openRefunds} onAdd={add} />
             : <CategoryView totals={totals} onHistory={showHistory} onAdd={add} />}
           </div>}
       </div>
@@ -264,7 +271,11 @@ export default function App() {
     {editingOpening !== null && <OpeningBalance original={editingOpening} onClose={() => setEditingOpening(null)}
       onSaved={() => { setEditingOpening(null); void reload(); notify('Saldo inicial guardado') }} />}
     {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} onClose={() => setEditor(null)}
-      onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} onFavorite={changeFavorite} />}
+      onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} onFavorite={changeFavorite} onRefunds={openRefunds} />}
+    {refundDialog && <Refunds entry={refundDialog.entry} selected={refundDialog.selected} onClose={() => {
+      if (!refundDialog.selected) edit(refundDialog.entry)
+      setRefundDialog(null)
+    }} onSaved={message => { setRefundDialog(null); void reload(); notify(message) }} />}
     {utility === 'favorites' && <FavoriteManager favorites={favorites} onEdit={editFavorite} onClose={() => setUtility(null)} />}
     {report && <MonthlyStory key={report.month} report={report} onClose={() => setStoryMonth(null)}
       onHistory={() => { setStoryMonth(null); setMonth(report.month); showHistory() }} />}

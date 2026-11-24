@@ -19,6 +19,7 @@ Abre la dirección que muestra Vite en la terminal. Para probar la interfaz desd
 - **Registrar.** Pulsa **Nuevo movimiento** o **Nuevo** en el móvil. Elige gasto o ingreso, escribe el importe, añade un concepto si quieres y revisa la categoría y la fecha y pulsa **Guardar movimiento**. Los accesos de **Registro rápido** abren el formulario con la categoría elegida.
 - **Fecha y cambios pendientes.** Cuando la fecha corresponde a otro mes, el formulario indica cuál. Toca **Hoy** para usar la fecha actual. Si cierras un formulario con cambios, puedes seguir editándolo o descartarlos.
 - **Efectivo y banco.** En los gastos, selecciona **Pagado desde → Cuenta bancaria** para pagos como tarjeta, Bizum y transferencias, o **Efectivo** si pagaste en metálico. **Máquina Trabajo** siempre cuenta como efectivo, incluidos los movimientos antiguos. Los demás gastos antiguos se consideran bancarios hasta que cambies su forma de pago.
+- **Reembolsos y gastos compartidos.** Registra el gasto por su importe completo, ábrelo y pulsa **Registrar reembolso**. Introduce lo cobrado, su fecha y si lo recibiste en efectivo o en cuenta bancaria. Puedes registrar varios reembolsos parciales desde **Ver reembolsos**. El gasto neto se atribuye al mes y la categoría de la compra. El saldo bancario incorpora los reembolsos por cuenta en la fecha de cobro y el historial muestra ambos movimientos por separado.
 - **Cajero.** Pulsa **Nuevo → Retirada** para registrar dinero que sacaste de tu cuenta. La retirada reduce el saldo bancario. Registra después cada compra como gasto en efectivo para que cuente en el gasto mensual.
 - **Consultar.** El balance del mes muestra ingresos menos todos los gastos, incluidos los pagos en efectivo. El **saldo bancario al cierre** combina el saldo inicial, los ingresos, los gastos bancarios y las retiradas hasta el mes elegido. El **saldo bancario total** considera todos los meses del historial. Las flechas cambian de mes. Toca el nombre del mes para elegir otro periodo o volver al actual.
 - **Buscar y corregir.** En **Movimientos** puedes buscar por concepto o categoría y filtrar ingresos o gastos. El selector de periodo incluye **Todos los meses**. Toca una fila para editarla o eliminarla con confirmación.
@@ -33,7 +34,7 @@ En **Más → Apariencia → Diseños** puedes usar **Original**, **Medianoche**
 
 Abre **Copias de seguridad** desde la barra lateral o el menú **Más**. **Descargar copia** guarda el saldo inicial y todos los meses en un archivo `mi-dinero-AAAA-MM-DD.json`. El archivo contiene los conceptos e importes en texto legible. Guárdalo en un lugar privado.
 
-Las copias nuevas conservan las formas de pago y las retiradas. Puedes restaurar las copias anteriores. Los gastos antiguos de Máquina Trabajo se interpretan como efectivo también al restaurarlos.
+Las copias nuevas conservan las formas de pago, las retiradas y los reembolsos de cada gasto. Puedes restaurar las copias anteriores. Los gastos antiguos de Máquina Trabajo se interpretan como efectivo también al restaurarlos.
 
 El panel indica la fecha de la última exportación iniciada desde el dispositivo. Si el navegador admite compartir archivos, **Compartir copia** abre el menú del sistema para enviarla o guardarla en **Archivos**.
 

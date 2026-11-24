@@ -27,8 +27,10 @@ function monthRange(entries: Ledger['entries']) {
   let first = entries[0].date
   let last = first
   for (const entry of entries) {
-    if (entry.date < first) first = entry.date
-    if (entry.date > last) last = entry.date
+    for (const date of [entry.date, ...(entry.refunds ?? []).map(refund => refund.date)]) {
+      if (date < first) first = date
+      if (date > last) last = date
+    }
   }
   const firstMonth = first.slice(0, 7)
   const lastMonth = last.slice(0, 7)
@@ -135,6 +137,8 @@ export function Backups({ ledger, onClose, onRestored }: {
     })
   }
 
+  const refundsCount = preview?.ledger.entries.reduce((total, entry) => total + (entry.refunds?.length ?? 0), 0) ?? 0
+
   return <Modal title={preview ? 'Confirmar restauración' : 'Copias de seguridad'} onClose={onClose} busy={busy}>
     {preview && <div className="confirm-panel">
       <div className="file-preview"><FileCheck2 size={23} /><strong>{preview.file}</strong></div>
@@ -146,6 +150,7 @@ export function Backups({ ledger, onClose, onRestored }: {
         <div className={preview.changes.removed ? 'restore-removals' : undefined}><dt>Se eliminarán</dt><dd>{preview.changes.removed}</dd></div>
       </dl>
       {preview.months && <p>Meses incluidos: <strong>{preview.months}</strong>.</p>}
+      {refundsCount > 0 && <p>Reembolsos incluidos: <strong>{refundsCount}</strong>.</p>}
       <p>Saldo inicial del banco que se restaurará: <strong className="money">{money(preview.ledger.openingCents)}</strong>.
         {preview.ledger.openingCents !== preview.current.openingCents && <> Saldo inicial actual: <strong className="money">{money(preview.current.openingCents)}</strong>.</>}</p>
       {preview.ledger.reminders && <p>Recordatorios que se restaurarán: <strong>{preview.ledger.reminders.length}</strong>.</p>}

@@ -2,6 +2,7 @@ import { readReminders, type Reminder } from './reminders.ts'
 
 export type Kind = 'expense' | 'income' | 'withdrawal'
 export type PaymentSource = 'cash' | 'bank'
+export interface Refund { id: string, cents: number, date: string, payment: PaymentSource }
 
 export const categories = {
   food: { name: 'Alimentación', kind: 'expense', color: '#f0a451' },
@@ -53,7 +54,14 @@ export interface Entry {
   date: string
   createdAt: number
   payment?: PaymentSource
+  refunds?: Refund[]
 }
+
+export function refundedCents(entry: Entry) {
+  return entry.refunds?.reduce((total, refund) => total + refund.cents, 0) ?? 0
+}
+
+export const netExpense = (entry: Entry) => entry.cents - refundedCents(entry)
 
 export function paymentSource({ category, payment }: Pick<Entry, 'category' | 'payment'>): PaymentSource {
   return category === 'machine' || (categories[category].kind === 'expense' && payment === 'cash') ? 'cash' : 'bank'
@@ -109,10 +117,16 @@ export function accountBalances({ entries, openingCents }: Ledger, month: string
   let closing = openingCents
   let total = openingCents
   for (const entry of entries) {
-    if (paymentSource(entry) === 'cash') continue
-    const signed = entry.kind === 'income' ? entry.cents : -entry.cents
-    total += signed
-    if (entry.date.slice(0, 7) <= month) closing += signed
+    if (paymentSource(entry) === 'bank') {
+      const signed = entry.kind === 'income' ? entry.cents : -entry.cents
+      total += signed
+      if (entry.date.slice(0, 7) <= month) closing += signed
+    }
+    for (const refund of entry.refunds ?? []) {
+      if (refund.payment === 'cash') continue
+      total += refund.cents
+      if (refund.date.slice(0, 7) <= month) closing += refund.cents
+    }
   }
   return { closing, total }
 }
@@ -161,9 +175,11 @@ export function summarize(entries: Entry[]) {
     if (entry.kind === 'income') {
       income += entry.cents
     } else if (entry.kind === 'expense') {
-      expense += entry.cents
+      const net = netExpense(entry)
+      if (!net) continue
+      expense += net
       const category = displayCategory(entry.category)
-      amounts.set(category, (amounts.get(category) ?? 0) + entry.cents)
+      amounts.set(category, (amounts.get(category) ?? 0) + net)
     }
   }
   const breakdown = [...amounts].sort((a, b) => b[1] - a[1])
@@ -181,26 +197,50 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+const validId = (value: unknown): value is string => typeof value === 'string' && /^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value)
+
+function readRefunds(value: unknown, expense: Entry): Refund[] {
+  if (!Array.isArray(value)) throw new Error('La copia contiene reembolsos no válidos.')
+  const ids = new Set<string>()
+  let total = 0
+  return value.map((item: unknown) => {
+    if (!record(item)) throw new Error('La copia contiene un reembolso ilegible.')
+    const { id, cents, date, payment } = item
+    if (!validId(id) || ids.has(id.toLowerCase()) || typeof cents !== 'number' || !Number.isSafeInteger(cents) || cents <= 0 ||
+      !validDay(date) || (payment !== 'bank' && payment !== 'cash')) throw new Error('La copia contiene un reembolso con datos no válidos.')
+    total += cents
+    if (total > expense.cents) throw new Error('Los reembolsos de la copia superan el importe de un gasto.')
+    ids.add(id.toLowerCase())
+    return { id: id.toLowerCase(), cents, date, payment }
+  })
+}
+
 function readEntry(value: unknown, version: number): Entry {
   if (!record(value)) throw new Error('La copia contiene un movimiento ilegible.')
-  const { id, kind, cents, category, concept, date, createdAt, payment } = value
-  if (typeof id !== 'string' || !/^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i.test(id)
-      || (kind !== 'income' && kind !== 'expense' && !(version === 3 && kind === 'withdrawal'))
+  const { id, kind, cents, category, concept, date, createdAt, payment, refunds } = value
+  if (!validId(id)
+      || (kind !== 'income' && kind !== 'expense' && !(version >= 3 && kind === 'withdrawal'))
       || typeof cents !== 'number' || !Number.isSafeInteger(cents) || cents <= 0 || cents > MAX_CENTS
       || typeof category !== 'string' || !Object.hasOwn(categories, category)
       || categories[category as CategoryId].kind !== kind
       || (payment !== undefined && (kind !== 'expense' || (payment !== 'cash' && payment !== 'bank')))
+      || (refunds !== undefined && (kind !== 'expense' || version < 4))
       || typeof concept !== 'string' || concept.length > MAX_CONCEPT
       || !validDay(date) || typeof createdAt !== 'number' || !Number.isSafeInteger(createdAt) || createdAt < 0) {
     throw new Error('La copia contiene un movimiento con datos no válidos.')
   }
   const entry: Entry = { id: id.toLowerCase(), kind, cents, category: category as CategoryId, concept: concept.trim(), date, createdAt }
-  return payment === undefined ? entry : { ...entry, payment: paymentSource({ ...entry, payment }) }
+  if (payment !== undefined) entry.payment = paymentSource({ ...entry, payment })
+  if (refunds !== undefined) entry.refunds = readRefunds(refunds, entry)
+  return entry
 }
 
 export function makeBackup({ entries, openingCents, reminders }: Ledger) {
-  const transactions = entries.map(entry => entry.kind === 'expense' ? { ...entry, payment: paymentSource(entry) } : entry)
-  return { app: 'mi-dinero', version: 3, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions, reminders }
+  const version = entries.some(entry => entry.refunds?.length) ? 4 : 3
+  const transactions = entries.map(entry => entry.kind === 'expense' ? {
+    ...entry, payment: paymentSource(entry), refunds: entry.refunds?.length ? entry.refunds : undefined,
+  } : entry)
+  return { app: 'mi-dinero', version, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions, reminders }
 }
 
 export function readBackup(text: string): Ledger {
@@ -208,7 +248,7 @@ export function readBackup(text: string): Ledger {
   try { data = JSON.parse(text) } catch { throw new Error('El archivo no contiene JSON válido.') }
   if (!record(data) || data.app !== 'mi-dinero') throw new Error('Selecciona una copia creada con Mi Dinero.')
   const { version } = data
-  if ((version !== 1 && version !== 2 && version !== 3) || data.currency !== 'EUR') throw new Error('La versión o la moneda de esta copia es incompatible.')
+  if ((version !== 1 && version !== 2 && version !== 3 && version !== 4) || data.currency !== 'EUR') throw new Error('La versión o la moneda de esta copia es incompatible.')
   if (!Array.isArray(data.transactions)) throw new Error('Falta la lista de movimientos en la copia.')
   const entries = data.transactions.map(value => readEntry(value, version))
   if (new Set(entries.map(entry => entry.id)).size !== entries.length) throw new Error('La copia contiene movimientos duplicados.')
@@ -222,7 +262,11 @@ export function readBackup(text: string): Ledger {
 
 export function equalEntry(a: Entry | undefined, b: Entry) {
   return a?.id === b.id && a.kind === b.kind && a.cents === b.cents && a.category === b.category &&
-    a.concept === b.concept && a.date === b.date && a.createdAt === b.createdAt && paymentSource(a) === paymentSource(b)
+    a.concept === b.concept && a.date === b.date && a.createdAt === b.createdAt && paymentSource(a) === paymentSource(b) &&
+    (a.refunds?.length ?? 0) === (b.refunds?.length ?? 0) && (a.refunds ?? []).every((refund, index) => {
+      const other = b.refunds![index]
+      return refund.id === other.id && refund.cents === other.cents && refund.date === other.date && refund.payment === other.payment
+    })
 }
 
 export function compareEntries(current: Entry[], incoming: Entry[]) {

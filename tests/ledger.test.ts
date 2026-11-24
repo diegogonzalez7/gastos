@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   accountBalances, calendarDay, compareEntries, latestFirst, parseOpening, makeBackup, monthly, parseAmount, readBackup,
-  searchText, shiftMonth, summarize, validDay, type Entry,
+  searchText, shiftMonth, summarize, validDay, type Entry, type PaymentSource, type Refund,
 } from '../src/ledger.ts'
 
 const expense: Entry = {
@@ -58,8 +58,34 @@ test('una copia dañada, incompatible o duplicada se rechaza entera', () => {
     { category: 'salary' }, { category: '__proto__' }, { date: '2024-02-31' }, { id: 'x' }, { createdAt: -1 }, { payment: 'card' },
   ]) assert.throws(() => readBackup(JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), transactions: [income, { ...expense, ...patch }] })))
   for (const text of ['{', 'null', '{}', JSON.stringify(makeBackup({ entries: [expense, expense], openingCents: 0 })),
-    JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), version: 4 }), JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), currency: 'USD' })]) {
+    JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), version: 5 }), JSON.stringify({ ...makeBackup({ entries: [], openingCents: 0 }), currency: 'USD' })]) {
     assert.throws(() => readBackup(text))
+  }
+})
+
+test('un reembolso corrige el gasto original y afecta al banco por su propia fecha y forma de cobro', () => {
+  const refund: Refund = { id: '44444444-4444-4444-8444-444444444444', cents: 2000, date: '2024-03-01', payment: 'bank' }
+  const cases: [PaymentSource, PaymentSource, number, number][] = [
+    ['bank', 'bank', 6000, 8000], ['cash', 'bank', 10000, 12000], ['bank', 'cash', 6000, 6000],
+  ]
+  for (const [paid, received, february, march] of cases) {
+    const entry: Entry = { ...expense, cents: 4000, payment: paid, refunds: [{ ...refund, payment: received }] }
+    const ledger = { entries: [entry], openingCents: 10000 }
+    assert.deepEqual(summarize(monthly(ledger.entries, '2024-02')), {
+      income: 0, expense: 2000, balance: -2000, breakdown: [{ category: 'food', cents: 2000, share: 1 }],
+    })
+    assert.equal(summarize(monthly(ledger.entries, '2024-03')).income, 0)
+    assert.deepEqual(accountBalances(ledger, '2024-02'), { closing: february, total: march })
+    assert.equal(accountBalances(ledger, '2024-03').closing, march)
+    assert.deepEqual(readBackup(JSON.stringify(makeBackup(ledger))), ledger)
+    assert.deepEqual(compareEntries([{ ...entry, refunds: [] }], [entry]), { added: 0, changed: 1, removed: 0 })
+  }
+
+  const paid = { ...expense, cents: 4000, refunds: [refund, { ...refund, id: '55555555-5555-4555-8555-555555555555' }] }
+  assert.deepEqual(summarize([paid]), { income: 0, expense: 0, balance: 0, breakdown: [] })
+  for (const refunds of [[refund, refund], [{ ...refund, cents: 4001 }], [{ ...refund, payment: 'card' }]]) {
+    const file = { ...makeBackup({ entries: [paid], openingCents: 0 }), transactions: [{ ...paid, refunds }] }
+    assert.throws(() => readBackup(JSON.stringify(file)))
   }
 })
 

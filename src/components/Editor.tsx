@@ -1,15 +1,16 @@
 import { useId, useState, type FormEvent } from 'react'
-import { ArrowDownLeft, ArrowUpRight, Banknote, Copy, Trash2 } from 'lucide-react'
-import { calendarDay, categories, categoryIds, displayCategory, MAX_CONCEPT, money, monthLabel, newEntryId, parseAmount, paymentSource, validDay, type CategoryId, type Entry, type Kind, type PaymentSource } from '../ledger'
+import { ArrowDownLeft, ArrowUpRight, Banknote, Copy, RotateCcw, Trash2 } from 'lucide-react'
+import { calendarDay, categories, categoryIds, displayCategory, MAX_CONCEPT, money, monthLabel, netExpense, newEntryId, parseAmount, paymentSource, refundedCents, validDay, type CategoryId, type Entry, type Kind, type PaymentSource } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
 import { changeEntry, saveEntry, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
 
 export interface EditorDraft { original?: Entry, copy?: Entry, category?: CategoryId, date: string, favorite?: Favorite, mode?: 'favorite' }
 
-export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
+export function Editor({ draft, onClose, onDuplicate, onRefunds, onSaved, onFavorite }: {
   draft: EditorDraft, onClose: () => void, onDuplicate: (entry: Entry) => void, onSaved: (date: string | null, message: string) => void,
   onFavorite: (id: string, favorite: Favorite | null) => void,
+  onRefunds: (entry: Entry) => void,
 }) {
   const old = draft.original
   const editingFavorite = draft.mode === 'favorite'
@@ -26,7 +27,7 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
   const [amount, setAmount] = useState(initialAmount)
   const [concept, setConcept] = useState(initialConcept)
   const [date, setDate] = useState(draft.date)
-  const [discard, setDiscard] = useState<'close' | 'duplicate' | null>(null)
+  const [discard, setDiscard] = useState<'close' | 'duplicate' | 'refunds' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -37,11 +38,13 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
   const selectedMonth = date.slice(0, 7)
   const differentMonth = validDay(date) && selectedMonth !== today.slice(0, 7)
   const effectivePayment = paymentSource({ category, payment })
+  const alreadyRefunded = old ? refundedCents(old) : 0
   const dirty = kind !== initialKind || category !== initialCategory || amount !== initialAmount ||
     concept !== initialConcept || date !== draft.date || effectivePayment !== initialPayment
 
-  function leave(action: 'close' | 'duplicate') {
+  function leave(action: 'close' | 'duplicate' | 'refunds') {
     if (action === 'duplicate' && old) onDuplicate(old)
+    else if (action === 'refunds' && old) onRefunds(old)
     else onClose()
   }
 
@@ -64,6 +67,7 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
     if (busy) return
     const cents = parseAmount(amount)
     if (!cents) { setError('Introduce un importe entre 0,01 € y 999.999.999,99 €, con un máximo de dos decimales.'); return }
+    if (cents < alreadyRefunded) { setError(`El gasto debe cubrir los ${money(alreadyRefunded)} ya reembolsados.`); return }
     if (!editingFavorite && !validDay(date)) { setError('Elige una fecha válida.'); return }
     setBusy(true)
     setError('')
@@ -77,6 +81,7 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
       const entry: Entry = {
         id: old?.id ?? newEntryId(), createdAt: old?.createdAt ?? Date.now(),
         kind, category, concept: concept.trim(), date, cents, ...method,
+        ...(old?.refunds?.length ? { refunds: old.refunds } : {}),
       }
       if (old) await changeEntry(old, entry)
       else await saveEntry(entry)
@@ -108,6 +113,7 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
     </div> : confirmDelete && (old || oldFavorite) ? <div className="confirm-panel">
       {oldFavorite ? <p>Se quitará <strong>{favoriteName(oldFavorite)}</strong> de Registro rápido.</p>
         : old && <p>Se eliminará <strong>{old.concept || categories[old.category].name}</strong> (<span className="money">{money(old.cents)}</span>) de tu historial.</p>}
+      {alreadyRefunded > 0 && <p>También se eliminarán los reembolsos vinculados a este gasto.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={() => { setConfirmDelete(false); setError('') }}>Cancelar</button>
@@ -116,9 +122,10 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
     </div> : <form onSubmit={save} className="entry-form">
       <div className={'kind-switch' + (editingFavorite ? '' : ' movement-kind')} role="group" aria-label="Tipo de movimiento">
         <button type="button" aria-pressed={kind === 'expense'} onClick={() => selectKind('expense')}><ArrowUpRight size={18} />Gasto</button>
-        <button type="button" aria-pressed={kind === 'income'} onClick={() => selectKind('income')}><ArrowDownLeft size={18} />Ingreso</button>
-        {!editingFavorite && <button type="button" aria-pressed={kind === 'withdrawal'} onClick={() => selectKind('withdrawal')}><Banknote size={18} />Retirada</button>}
+        <button type="button" aria-pressed={kind === 'income'} disabled={alreadyRefunded > 0} onClick={() => selectKind('income')}><ArrowDownLeft size={18} />Ingreso</button>
+        {!editingFavorite && <button type="button" aria-pressed={kind === 'withdrawal'} disabled={alreadyRefunded > 0} onClick={() => selectKind('withdrawal')}><Banknote size={18} />Retirada</button>}
       </div>
+      {alreadyRefunded > 0 && <p className="entry-hint">Este movimiento tiene reembolsos vinculados y se conserva como gasto.</p>}
       {kind === 'withdrawal' && <p className="entry-hint">Sacar efectivo reduce el saldo bancario. Los gastos se registran al usar ese dinero.</p>}
       <AmountInput label="Importe" value={amount} onChange={setAmount} />
       {!editingFavorite && <div className={'entry-date' + (differentMonth ? ' different-month' : '')}>
@@ -141,6 +148,12 @@ export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
         {category === 'machine' && <p id={machineHintId} className="entry-hint">Máquina Trabajo se registra siempre en efectivo.</p>}
       </div>}
       {error && <p className="form-error" role="alert">{error}</p>}
+      {old?.kind === 'expense' && <div className="refund-entry-action">
+        {alreadyRefunded > 0 && <p className="entry-hint">Recuperado <strong className="money">{money(alreadyRefunded)}</strong> · Gasto neto <strong className="money">{money(netExpense(old))}</strong></p>}
+        <button className="secondary" type="button" disabled={busy} onClick={() => dirty ? setDiscard('refunds') : leave('refunds')}>
+          <RotateCcw size={16} />{alreadyRefunded ? 'Ver reembolsos' : 'Registrar reembolso'}
+        </button>
+      </div>}
       <button className="primary wide" type="submit" disabled={busy}>{busy ? 'Guardando…' : editingFavorite ? 'Guardar favorito' : old ? 'Guardar cambios' : 'Guardar movimiento'}</button>
       {(old || oldFavorite) && <div className="editor-actions">
         {old && <button className="text-button" type="button" disabled={busy} onClick={() => dirty ? setDiscard('duplicate') : leave('duplicate')}>
