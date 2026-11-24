@@ -81,6 +81,7 @@ export function Editor({ draft, onClose, onDuplicate, onRefunds, onSaved, onFavo
       const entry: Entry = {
         id: old?.id ?? newEntryId(), createdAt: old?.createdAt ?? Date.now(),
         kind, category, concept: concept.trim(), date, cents, ...method,
+        ...(kind === 'expense' && (draft.favorite || old?.fromFavorite) ? { fromFavorite: true } : {}),
         ...(old?.refunds?.length ? { refunds: old.refunds } : {}),
       }
       if (old) await changeEntry(old, entry)

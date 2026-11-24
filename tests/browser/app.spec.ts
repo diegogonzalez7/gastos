@@ -36,6 +36,32 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Nuevo movimiento' })).toBeEnabled()
 })
 
+test('el selector mantiene su posición con meses largos y cortos en las tres pantallas', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: testInfo.project.name === 'móvil' ? 393 : 810, height: 850 })
+  await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
+  await page.reload()
+  const period = page.getByRole('group', { name: 'Periodo', exact: true })
+  const choose = page.getByRole('button', { name: 'Elegir periodo' })
+  const initialPosition = await period.boundingBox()
+  for (const screen of ['Resumen', 'Movimientos', 'Categorías']) {
+    await navigate(page, screen)
+    const heading = await page.getByRole('heading', { level: 1, name: screen }).boundingBox()
+    expect(initialPosition?.y).toBe(heading?.y)
+    for (const month of ['Mayo', 'Septiembre', 'Noviembre']) {
+      await choose.click()
+      await page.getByRole('dialog').getByRole('button', { name: month, exact: true }).click()
+      await expect(choose).toHaveAttribute('title', `${month} 2026`)
+      expect(await period.boundingBox()).toEqual(initialPosition)
+      expect(await choose.locator('span:visible').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    }
+    if (screen === 'Movimientos') {
+      await choose.click()
+      await page.getByRole('button', { name: 'Todos los meses', exact: true }).click()
+      expect(await period.boundingBox()).toEqual(initialPosition)
+    }
+  }
+})
+
 test('el libro mensual se calcula, persiste y se corrige desde el historial', async ({ page }) => {
   await balance(page, '0,00€')
   await add(page, 'Nómina de febrero', '2000', '2024-02-03', 'salary')
@@ -273,7 +299,7 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
     await openLatest(second, 1)
     await balance(second, '0,00€')
     await second.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
-    await expect(second.getByRole('button', { name: 'Editar Café desde el móvil' })).toBeVisible()
+    await expect(second.getByRole('button', { name: 'Editar Máquina Trabajo · Café desde el móvil' })).toBeVisible()
     await add(second, 'Comida desde el PC', '9', '2026-11-24', 'meal')
     await backups(second)
     await upload(second)
@@ -281,7 +307,7 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
 
     await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
     await page.reload()
-    await page.getByRole('button', { name: 'Editar Café desde el móvil' }).click()
+    await page.getByRole('button', { name: 'Editar Máquina Trabajo · Café desde el móvil' }).click()
     await page.getByLabel('Importe', { exact: true }).fill('1,00')
     await page.getByRole('button', { name: 'Guardar cambios' }).click()
     await add(page, 'Solo en el móvil', '5', '2026-11-24', 'transport')
@@ -348,8 +374,17 @@ test('un favorito conserva importe y categoría y abre un movimiento con fecha d
   await page.getByRole('button', { name: 'Eliminar favorito' }).click()
   await page.getByRole('button', { name: 'Sí, eliminar' }).click()
   await expect(page.getByRole('button', { name: 'Añadir favorito' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Editar Café', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Editar Máquina Trabajo · Café', exact: true })).toBeVisible()
   await balance(page, '-0,90€')
+  await add(page, '', '0,90', '2026-11-24', 'machine')
+  await navigate(page, 'Movimientos')
+  const machineRows = page.getByRole('button', { name: /^Editar Máquina Trabajo/ })
+  await expect(machineRows.locator('.entry-info strong')).toHaveText(['Máquina Trabajo', 'Máquina Trabajo'])
+  await expect(machineRows.locator('.entry-info small')).toHaveText(['Gasto · Efectivo', 'Gasto · Efectivo'])
+  await page.getByRole('searchbox').fill('cafe')
+  await expect(machineRows).toHaveCount(1)
+  await machineRows.click()
+  await expect(page.getByRole('dialog').getByLabel('Concepto')).toHaveValue('Café')
 })
 
 test('un ingreso en efectivo cuenta para el mes y conserva su forma de cobro en favoritos y copias', async ({ page }) => {
@@ -423,7 +458,7 @@ test('el saldo bancario separa el efectivo y las retiradas del balance mensual a
   const dialog = page.getByRole('dialog')
   const cash = dialog.getByRole('button', { name: 'Efectivo', exact: true })
   const bankButton = dialog.getByRole('button', { name: 'Cuenta bancaria', exact: true })
-  await page.getByRole('button', { name: 'Editar Café anterior' }).click()
+  await page.getByRole('button', { name: 'Editar Máquina Trabajo · Café anterior' }).click()
   await expect(cash).toHaveAttribute('aria-pressed', 'true')
   await expect(bankButton).toBeDisabled()
   await dialog.getByRole('button', { name: 'Cerrar' }).click()
@@ -767,7 +802,7 @@ test('un mes anterior se destaca, Hoy cambia la fecha y cerrar protege el borrad
 test('duplicar un movimiento permite confirmar una copia con fecha de hoy', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-23T12:00:00+01:00'))
   await add(page, 'Café', '0,90', '2026-10-01', 'machine')
-  await page.getByRole('button', { name: 'Editar Café' }).click()
+  await page.getByRole('button', { name: 'Editar Máquina Trabajo · Café' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('Importe', { exact: true }).fill('0,95')
   await dialog.getByRole('button', { name: 'Duplicar movimiento' }).click()
@@ -783,7 +818,7 @@ test('duplicar un movimiento permite confirmar una copia con fecha de hoy', asyn
   await page.getByRole('button', { name: 'Mes siguiente' }).click()
   await balance(page, '0,00€')
   await page.getByRole('button', { name: 'Mes anterior' }).click()
-  await page.getByRole('button', { name: 'Editar Café' }).click()
+  await page.getByRole('button', { name: 'Editar Máquina Trabajo · Café' }).click()
   await dialog.getByRole('button', { name: 'Duplicar movimiento' }).click()
   await dialog.getByLabel('Importe', { exact: true }).fill('0,95')
   await dialog.getByRole('button', { name: 'Guardar movimiento' }).click()
@@ -977,7 +1012,7 @@ test('los diseños se pueden previsualizar, se recuerdan y conservan el modo del
 
   await page.reload()
   await expect(root).toHaveAttribute('data-design', 'sand')
-  await expect(page.getByRole('button', { name: 'Editar Café del día' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Editar Máquina Trabajo · Café del día' })).toBeVisible()
   await openDesigns()
   await expect(picker.getByRole('button', { name: 'Arena' })).toHaveAttribute('aria-pressed', 'true')
   await picker.getByRole('button', { name: 'Original' }).click()
@@ -985,5 +1020,5 @@ test('los diseños se pueden previsualizar, se recuerdan y conservan el modo del
   await expect(root).toHaveAttribute('data-theme', 'dark')
   await expect(root).toHaveCSS('background-color', 'rgb(17, 27, 26)')
   await picker.getByRole('button', { name: 'Cerrar' }).click()
-  await expect(page.getByRole('button', { name: 'Editar Café del día' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Editar Máquina Trabajo · Café del día' })).toBeVisible()
 })

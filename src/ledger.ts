@@ -54,6 +54,7 @@ export interface Entry {
   date: string
   createdAt: number
   payment?: PaymentSource
+  fromFavorite?: true
   refunds?: Refund[]
 }
 
@@ -218,13 +219,14 @@ function readRefunds(value: unknown, expense: Entry): Refund[] {
 
 function readEntry(value: unknown, version: number): Entry {
   if (!record(value)) throw new Error('La copia contiene un movimiento ilegible.')
-  const { id, kind, cents, category, concept, date, createdAt, payment, refunds } = value
+  const { id, kind, cents, category, concept, date, createdAt, payment, fromFavorite, refunds } = value
   if (!validId(id)
       || (kind !== 'income' && kind !== 'expense' && !(version >= 3 && kind === 'withdrawal'))
       || typeof cents !== 'number' || !Number.isSafeInteger(cents) || cents <= 0 || cents > MAX_CENTS
       || typeof category !== 'string' || !Object.hasOwn(categories, category)
       || categories[category as CategoryId].kind !== kind
       || (payment !== undefined && ((kind !== 'expense' && !(kind === 'income' && version >= 5)) || (payment !== 'cash' && payment !== 'bank')))
+      || (fromFavorite !== undefined && (kind !== 'expense' || fromFavorite !== true))
       || (refunds !== undefined && (kind !== 'expense' || version < 4))
       || typeof concept !== 'string' || concept.length > MAX_CONCEPT
       || !validDay(date) || typeof createdAt !== 'number' || !Number.isSafeInteger(createdAt) || createdAt < 0) {
@@ -232,6 +234,7 @@ function readEntry(value: unknown, version: number): Entry {
   }
   const entry: Entry = { id: id.toLowerCase(), kind, cents, category: category as CategoryId, concept: concept.trim(), date, createdAt }
   if (payment !== undefined) entry.payment = paymentSource({ ...entry, payment })
+  if (fromFavorite === true) entry.fromFavorite = true
   if (refunds !== undefined) entry.refunds = readRefunds(refunds, entry)
   return entry
 }
@@ -266,7 +269,7 @@ export function readBackup(text: string): Ledger {
 
 export function equalEntry(a: Entry | undefined, b: Entry) {
   return a?.id === b.id && a.kind === b.kind && a.cents === b.cents && a.category === b.category &&
-    a.concept === b.concept && a.date === b.date && a.createdAt === b.createdAt && paymentSource(a) === paymentSource(b) &&
+    a.concept === b.concept && a.date === b.date && a.createdAt === b.createdAt && paymentSource(a) === paymentSource(b) && a.fromFavorite === b.fromFavorite &&
     (a.refunds?.length ?? 0) === (b.refunds?.length ?? 0) && (a.refunds ?? []).every((refund, index) => {
       const other = b.refunds![index]
       return refund.id === other.id && refund.cents === other.cents && refund.date === other.date && refund.payment === other.payment

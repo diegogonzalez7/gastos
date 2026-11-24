@@ -26,6 +26,7 @@ Abre la dirección que muestra Vite en la terminal. Para probar la interfaz desd
 - **Buscar y corregir.** En **Movimientos** puedes buscar por concepto o categoría y filtrar ingresos o gastos. El selector de periodo incluye **Todos los meses**. Toca una fila para editarla o eliminarla con confirmación.
 - **Repetir un movimiento.** Abre un movimiento guardado y pulsa **Duplicar movimiento**. La copia empieza con la fecha de hoy y puedes ajustar sus datos antes de guardarla.
 - **Favoritos con importe.** En **Resumen → Registro rápido → Añadir favorito**, guarda un gasto o ingreso con su importe, categoría y concepto. Al tocar el favorito se abre un movimiento editable con la fecha de hoy. Usa **Gestionar favoritos** para añadir, editar o borrar accesos. Cada dispositivo guarda sus propios favoritos.
+- **Presentación del historial.** Los gastos registrados desde favoritos y los de Máquina Trabajo muestran la categoría como título. El concepto se conserva en el formulario y en la búsqueda.
 - **Entender los gastos.** **Categorías** ordena los gastos del mes por importe y muestra su porcentaje. Toca una categoría del desglose para consultar los movimientos que la componen.
 - **Apariencia.** La opción inicial sigue el tema del sistema. Puedes elegir claro u oscuro desde la barra lateral o desde **Más** en el móvil.
 

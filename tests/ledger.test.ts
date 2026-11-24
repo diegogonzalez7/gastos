@@ -46,7 +46,7 @@ test('el resumen solo agrega el mes y ordena las categorías por gasto', () => {
 
 test('la copia versionada admite todos los movimientos y también una cartera vacía', () => {
   const withdrawal: Entry = { ...income, id: '33333333-3333-4333-8333-333333333333', kind: 'withdrawal', category: 'withdrawal' }
-  for (const entries of [[], [income, { ...expense, payment: 'cash' as const }, withdrawal]]) {
+  for (const entries of [[], [income, { ...expense, payment: 'cash' as const, fromFavorite: true as const }, withdrawal]]) {
     const ledger = { entries, openingCents: -1234 }
     assert.deepEqual(readBackup(JSON.stringify(makeBackup(ledger))), ledger)
   }

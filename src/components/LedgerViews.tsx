@@ -12,11 +12,14 @@ import { CategoryBadge, EmptyState, FittedAmount, Modal } from './ui'
 export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, onEdit: (entry: Entry) => void, showDate?: boolean }) {
   const incoming = entry.kind === 'income'
   const category = displayCategory(entry.category)
-  const title = entry.concept || categories[category].name
+  const categoryName = categories[category].name
+  const categoryFirst = entry.kind === 'expense' && (entry.fromFavorite || category === 'machine')
+  const title = !categoryFirst && entry.concept ? entry.concept : categoryName
+  const accessibleTitle = categoryFirst && entry.concept && entry.concept !== title ? `${title} · ${entry.concept}` : title
   const description = useId()
   const paymentLabel = entry.kind === 'withdrawal' ? '' : paymentSource(entry) === 'cash' ? ' · Efectivo' : ' · Cuenta bancaria'
-  const detail = entry.concept || entry.kind === 'withdrawal' ? categories[category].name : incoming ? 'Ingreso' : 'Gasto'
-  return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + title}
+  const detail = (!categoryFirst && entry.concept) || entry.kind === 'withdrawal' ? categoryName : incoming ? 'Ingreso' : 'Gasto'
+  return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + accessibleTitle}
     aria-describedby={description + '-category ' + description + '-amount'}>
     <CategoryBadge category={category} />
     <span className="entry-info"><strong>{title}</strong><small id={description + '-category'}>

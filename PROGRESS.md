@@ -125,3 +125,8 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 
 - Los ingresos y favoritos tienen el selector Recibido en. Los ingresos en efectivo cuentan en el balance mensual y quedan fuera del saldo bancario. Los ingresos antiguos conservan el tratamiento bancario.
 - Las copias conservan la forma de cobro y se pueden restaurar en la versión actual junto con los formatos anteriores. Las pruebas cubren favoritos, edición, saldo y restauración de ingresos en efectivo.
+
+## Posición del selector y presentación de favoritos
+
+- El selector ocupa un lugar fijo en la fila superior de Resumen, Movimientos y Categorías. En los anchos más estrechos usa nombres de mes abreviados.
+- Los gastos de favoritos y de Máquina Trabajo muestran la categoría en el historial y conservan su concepto para editarlo o buscarlo. Las copias guardan la presentación de los nuevos gastos creados desde favoritos.
