@@ -2,16 +2,16 @@ import { useState, type FormEvent } from 'react'
 import { Cloud, CloudDownload, CloudUpload, ExternalLink, Search } from 'lucide-react'
 import {
   connectDropbox, downloadDropboxBackup, dropboxAuthorization, listDropboxBackups, prepareDropbox,
-  savedDropbox, saveDropbox, uploadDropboxBackup, type CloudBackup, type DropboxSettings,
+  saveDropbox, uploadDropboxBackup, type CloudBackup, type DropboxSettings,
 } from '../dropbox'
 
 const backupDate = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'medium' })
 
-export function CloudBackups({ busy, run, makeFile, review, onUploaded }: {
+export function CloudBackups({ settings, onSettings, busy, run, makeFile, review, onUploaded }: {
+  settings: DropboxSettings, onSettings: (settings: DropboxSettings) => void,
   busy: boolean, run: (operation: () => Promise<void>) => void, makeFile: () => Promise<File>,
   review: (file: string, text: string) => Promise<void>, onUploaded: () => void,
 }) {
-  const [settings, setSettings] = useState(savedDropbox)
   const authorization = dropboxAuthorization(settings)
   const [showSetup, setShowSetup] = useState(!!settings.pending)
   const [appKey, setAppKey] = useState(settings.appKey)
@@ -20,7 +20,7 @@ export function CloudBackups({ busy, run, makeFile, review, onUploaded }: {
 
   function remember(next: DropboxSettings) {
     saveDropbox(next)
-    setSettings(next)
+    onSettings(next)
   }
 
   function prepare(event: FormEvent<HTMLFormElement>) {

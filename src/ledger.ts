@@ -212,3 +212,16 @@ export function equalEntry(a: Entry | undefined, b: Entry) {
   return a?.id === b.id && a.kind === b.kind && a.cents === b.cents && a.category === b.category &&
     a.concept === b.concept && a.date === b.date && a.createdAt === b.createdAt
 }
+
+export function compareEntries(current: Entry[], incoming: Entry[]) {
+  const remaining = new Map(current.map(entry => [entry.id, entry]))
+  let added = 0
+  let changed = 0
+  for (const entry of incoming) {
+    const previous = remaining.get(entry.id)
+    if (!previous) added++
+    else if (!equalEntry(previous, entry)) changed++
+    remaining.delete(entry.id)
+  }
+  return { added, changed, removed: remaining.size }
+}

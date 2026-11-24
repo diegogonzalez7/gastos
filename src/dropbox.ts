@@ -114,9 +114,10 @@ export async function listDropboxBackups(settings: DropboxSettings): Promise<Clo
   return Array.from(entries.values()).sort((a, b) => b.server_modified.localeCompare(a.server_modified))
 }
 
-export async function uploadDropboxBackup(settings: DropboxSettings, file: Blob) {
+export async function uploadDropboxBackup(settings: DropboxSettings, file: Blob, beforeRestoring = false) {
   const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '-')
-  const name = `mi-dinero-${stamp}Z-${crypto.randomUUID().slice(0, 8)}.json`
+  const prefix = beforeRestoring ? 'mi-dinero-antes-de-restaurar-' : 'mi-dinero-'
+  const name = `${prefix}${stamp}Z-${crypto.randomUUID().slice(0, 8)}.json`
   await filesRequest(contentUrl + 'upload', await accessToken(settings), {
     headers: { 'Content-Type': 'application/octet-stream', 'Dropbox-API-Arg': JSON.stringify({ path: '/' + name, mode: 'add', autorename: true }) },
     body: file,

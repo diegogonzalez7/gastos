@@ -258,6 +258,12 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .confirm-panel > p { overflow-wrap: anywhere; }
 .confirm-panel > p + p, .save-before-restore { margin-top: 8px; }
 .confirm-panel .form-error { margin-top: 12px; color: var(--danger); }
+.restore-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
+.restore-comparison div { display: grid; gap: 4px; padding: 8px 5px; background: var(--surface-soft); border-radius: 10px; text-align: center; }
+.restore-comparison dt { color: var(--secondary); font-size: 12px; }
+.restore-comparison dd { margin: 0; font-variant-numeric: tabular-nums; font-size: 19px; font-weight: 670; }
+.restore-comparison .restore-removals { color: var(--danger); background: var(--danger-bg); }
+.restore-comparison .restore-removals dt { color: inherit; }
 .action-row, .calendar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 .year-control { margin-bottom: 8px; }
 .month-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }

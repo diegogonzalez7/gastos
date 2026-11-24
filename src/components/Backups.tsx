@@ -1,7 +1,8 @@
 import { useState, type ChangeEvent } from 'react'
-import { Download, FileCheck2, FolderOpen, HardDrive, Share2, Upload } from 'lucide-react'
+import { CloudUpload, Download, FileCheck2, FolderOpen, HardDrive, Share2, Upload } from 'lucide-react'
+import { savedDropbox, uploadDropboxBackup } from '../dropbox'
 import { downloadFile } from '../files'
-import { calendarDay, dateLabel, makeBackup, monthLabel, readBackup, money, validDay, type Ledger } from '../ledger'
+import { calendarDay, compareEntries, dateLabel, makeBackup, monthLabel, readBackup, money, validDay, type Ledger } from '../ledger'
 import { readLedger, restoreLedger, storageMessage } from '../storage'
 import { CloudBackups } from './CloudBackups'
 import { Modal } from './ui'
@@ -41,10 +42,13 @@ export function Backups({ ledger, onClose, onRestored }: {
   const [cloudBusy, setCloudBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [dropbox, setDropbox] = useState(savedDropbox)
   const [lastExport, setLastExport] = useState(readLastExport)
   const [canShare] = useState(() => !!navigator.share &&
     !!navigator.canShare?.({ files: [new File(['{}'], 'mi-dinero.json', { type: backupType })] }))
-  const [preview, setPreview] = useState<{ file: string, ledger: Ledger, current: Ledger, months: string | null } | null>(null)
+  const [preview, setPreview] = useState<{
+    file: string, ledger: Ledger, current: Ledger, months: string | null, changes: ReturnType<typeof compareEntries>,
+  } | null>(null)
 
   function recordExport(message: string) {
     const date = calendarDay()
@@ -100,7 +104,8 @@ export function Backups({ ledger, onClose, onRestored }: {
 
   async function review(file: string, text: string) {
     const ledger = readBackup(text)
-    setPreview({ file, ledger, current: await latestLedger(), months: monthRange(ledger.entries) })
+    const current = await latestLedger()
+    setPreview({ file, ledger, current, months: monthRange(ledger.entries), changes: compareEntries(current.entries, ledger.entries) })
   }
 
   async function runCloud(operation: () => Promise<void>) {
@@ -122,27 +127,46 @@ export function Backups({ ledger, onClose, onRestored }: {
     catch (err) { setError(storageMessage(err)); setBusy(false) }
   }
 
+  function protectInDropbox() {
+    if (!preview) return
+    void runCloud(async () => {
+      await uploadDropboxBackup(dropbox, backupFile(await latestLedger(), true), true)
+      recordExport('Historial actual guardado en Dropbox. Puedes continuar con la restauración.')
+    })
+  }
+
   return <Modal title={preview ? 'Confirmar restauración' : 'Copias de seguridad'} onClose={onClose} busy={busy}>
     {preview && <div className="confirm-panel">
       <div className="file-preview"><FileCheck2 size={23} /><strong>{preview.file}</strong></div>
       <p>La copia contiene <strong>{preview.ledger.entries.length} {preview.ledger.entries.length === 1 ? 'movimiento' : 'movimientos'}</strong>.
         Al restaurarla se reemplazará todo el historial de este dispositivo, que ahora contiene {preview.current.entries.length}.</p>
+      <dl className="restore-comparison" aria-label="Cambios al restaurar">
+        <div><dt>Se añadirán</dt><dd>{preview.changes.added}</dd></div>
+        <div><dt>Se modificarán</dt><dd>{preview.changes.changed}</dd></div>
+        <div className={preview.changes.removed ? 'restore-removals' : undefined}><dt>Se eliminarán</dt><dd>{preview.changes.removed}</dd></div>
+      </dl>
       {preview.months && <p>Meses incluidos: <strong>{preview.months}</strong>.</p>}
-      <p>Saldo inicial que se restaurará: <strong className="money">{money(preview.ledger.openingCents)}</strong>.</p>
+      <p>Saldo inicial que se restaurará: <strong className="money">{money(preview.ledger.openingCents)}</strong>.
+        {preview.ledger.openingCents !== preview.current.openingCents && <> Saldo inicial actual: <strong className="money">{money(preview.current.openingCents)}</strong>.</>}</p>
       {preview.ledger.reminders && <p>Recordatorios que se restaurarán: <strong>{preview.ledger.reminders.length}</strong>.</p>}
       {preview.ledger.entries.length === 0 && <p className="form-error">Esta copia dejará tu historial vacío.</p>}
       {(preview.current.entries.length > 0 || preview.current.openingCents !== 0 || !!preview.current.reminders?.length) &&
-        <button className="secondary save-before-restore" disabled={busy} onClick={() => download(true)}>
-          <Download size={16} />Descargar copia del historial actual
-        </button>}
+        <div className="backup-actions save-before-restore">
+          {dropbox.refreshToken && <button className="secondary" disabled={busy} onClick={protectInDropbox}>
+            <CloudUpload size={16} />Guardar mi historial actual en Dropbox
+          </button>}
+          <button className="secondary" disabled={busy} onClick={() => download(true)}>
+            <Download size={16} />Descargar copia del historial actual
+          </button>
+        </div>}
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={() => { setPreview(null); setError(''); setNotice('') }}>Cancelar</button>
-        <button className="primary" disabled={busy} onClick={restore}>{busy ? 'Restaurando…' : 'Restaurar copia'}</button>
+        <button className="primary" disabled={busy} onClick={restore}>{busy && !cloudBusy ? 'Restaurando…' : 'Restaurar copia'}</button>
       </div>
     </div>}
     <div hidden={!!preview}><div className="backup-options">
       <p className="local-note"><HardDrive size={19} />Tus movimientos se guardan en este dispositivo. Conserva una copia para recuperarlos o llevarlos a otro dispositivo.</p>
-      <CloudBackups busy={busy} run={runCloud} makeFile={async () => backupFile(await latestLedger())} review={review}
+      <CloudBackups settings={dropbox} onSettings={setDropbox} busy={busy} run={runCloud} makeFile={async () => backupFile(await latestLedger())} review={review}
         onUploaded={() => recordExport('Copia subida a la carpeta privada de Dropbox.')} />
       <div className="backup-option"><span className="utility-icon"><Download size={21} /></span>
         <div><h3>Exportar copia</h3><p>Guarda tus movimientos, saldo inicial y recordatorios en un archivo JSON.</p>
