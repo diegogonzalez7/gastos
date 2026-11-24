@@ -24,6 +24,8 @@ Abre la dirección que muestra Vite en la terminal. Para probar la interfaz desd
 - **Entender los gastos.** **Categorías** ordena los gastos del mes por importe y muestra su porcentaje. Toca una categoría del desglose para consultar los movimientos que la componen.
 - **Apariencia.** La opción inicial sigue el tema del sistema. Puedes elegir claro u oscuro desde la barra lateral o desde **Más** en el móvil.
 
+En **Más → Apariencia → Diseños** puedes usar **Original**, **Medianoche**, **Grafito**, **Ciruela** o **Arena**. En ordenador, el acceso está en **Apariencia**, en la barra lateral. Medianoche, Grafito y Ciruela tienen fondo oscuro. Arena usa tonos crema. La elección se guarda en cada dispositivo y al volver a Original se recupera el modo de color que tenías seleccionado allí.
+
 ## Copias de seguridad
 
 Abre **Copias de seguridad** desde la barra lateral o el menú **Más**. **Descargar copia** guarda el saldo inicial y todos los meses en un archivo `mi-dinero-AAAA-MM-DD.json`. El archivo contiene los conceptos e importes en texto legible. Guárdalo en un lugar privado.

@@ -17,13 +17,13 @@
         z-index: 10;
         display: grid;
         place-items: center;
-        background: #f6f8f6;
-        color: #182d2b;
+        background: var(--canvas, #f6f8f6);
+        color: var(--text, #182d2b);
         text-align: center;
         font-family: system-ui, sans-serif;
         transition: opacity 180ms ease-out, visibility 180ms;
       }
-      :root[data-theme="dark"] .startup { background: #111b1a; color: #edf4ef; }
+      :root[data-theme="dark"] .startup { background: var(--canvas, #111b1a); color: var(--text, #edf4ef); }
       :root[data-app-ready] .startup { opacity: 0; visibility: hidden; pointer-events: none; }
       .startup img { display: block; margin: 0 auto 16px; border-radius: 20px; }
       .startup strong { display: block; font-size: 28px; letter-spacing: -.04em; }
@@ -34,9 +34,14 @@
     <script>
       try {
         var choice = localStorage.getItem('mi-dinero:theme')
-        document.documentElement.dataset.theme = choice === 'dark' || (choice !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
+        var design = localStorage.getItem('mi-dinero:design')
+        var custom = ['midnight', 'graphite', 'plum', 'sand'].includes(design)
+        if (custom) document.documentElement.dataset.design = design
+        var dark = custom ? design !== 'sand' : choice === 'dark' || (choice !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
       } catch {}
     </script>
+    <link rel="stylesheet" href="/src/designs.css" />
   </head>
   <body>
     <div class="startup" role="status" aria-label="Cargando Mi Dinero">

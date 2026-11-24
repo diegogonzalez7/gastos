@@ -614,3 +614,52 @@ test('el aviso mensual genera una cita recurrente y enlaza al atajo existente', 
   expect(file.suggestedFilename()).toBe('mi-dinero-cierre-mensual.ics')
   expect(await readFile((await file.path())!, 'utf8')).toContain('RRULE:FREQ=MONTHLY;BYMONTHDAY=1')
 })
+
+test('los diseños se pueden previsualizar, se recuerdan y conservan el modo del original', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
+  const root = page.locator('html')
+  const more = page.getByRole('button', { name: 'Más', exact: true })
+  const openAppearance = async () => {
+    if (await more.isVisible()) await more.click()
+  }
+  const openDesigns = async () => {
+    await openAppearance()
+    await page.getByRole('button', { name: 'Elegir diseño' }).click()
+  }
+  const picker = page.getByRole('dialog', { name: 'Diseños de Mi Dinero' })
+  const balanceCard = page.getByRole('region', { name: 'Resumen financiero del mes' })
+
+  await expect(root).not.toHaveAttribute('data-design', /.+/)
+  await add(page, 'Café del día', '0,90', '2026-11-24', 'machine')
+  await openAppearance()
+  await page.getByRole('button', { name: 'Tema oscuro' }).click()
+  await page.getByRole('button', { name: 'Elegir diseño' }).click()
+  await expect(picker.getByRole('button', { name: 'Original' })).toHaveAttribute('aria-pressed', 'true')
+
+  for (const [name, id, mode, color, radius] of [
+    ['Medianoche', 'midnight', 'dark', 'rgb(16, 25, 35)', '13px'],
+    ['Grafito', 'graphite', 'dark', 'rgb(24, 24, 25)', '9px'],
+    ['Ciruela', 'plum', 'dark', 'rgb(30, 23, 37)', '25px'],
+    ['Arena', 'sand', 'light', 'rgb(234, 227, 215)', '18px'],
+  ]) {
+    const option = picker.getByRole('button', { name, exact: true })
+    await option.click()
+    await expect(option).toHaveAttribute('aria-pressed', 'true')
+    await expect(root).toHaveAttribute('data-design', id)
+    await expect(root).toHaveAttribute('data-theme', mode)
+    await expect(root).toHaveCSS('background-color', color)
+    await expect(balanceCard).toHaveCSS('border-top-left-radius', radius)
+  }
+
+  await page.reload()
+  await expect(root).toHaveAttribute('data-design', 'sand')
+  await expect(page.getByRole('button', { name: 'Editar Café del día' })).toBeVisible()
+  await openDesigns()
+  await expect(picker.getByRole('button', { name: 'Arena' })).toHaveAttribute('aria-pressed', 'true')
+  await picker.getByRole('button', { name: 'Original' }).click()
+  await expect(root).not.toHaveAttribute('data-design', /.+/)
+  await expect(root).toHaveAttribute('data-theme', 'dark')
+  await expect(root).toHaveCSS('background-color', 'rgb(17, 27, 26)')
+  await picker.getByRole('button', { name: 'Cerrar' }).click()
+  await expect(page.getByRole('button', { name: 'Editar Café del día' })).toBeVisible()
+})

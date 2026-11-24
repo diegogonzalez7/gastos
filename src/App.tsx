@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Archive, Bell, CalendarClock, Check, ChevronRight, CircleAlert, Database, Ellipsis, LayoutDashboard,
-  List, MonitorSmartphone, Moon, PieChart, Plus, Sun, X, type LucideIcon,
+  List, MonitorSmartphone, Moon, Palette, PieChart, Plus, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
   accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry,
@@ -18,6 +18,7 @@ import { MonthlyAlert } from './components/MonthlyAlert'
 import { MonthlyStory, MonthlyStoryLink } from './components/MonthlyStory'
 import { monthlyReport } from './monthlyReport'
 import type { Reminder } from './reminders'
+import { DesignPicker, designKey, designLabel, savedDesign, type Design, type Theme } from './components/DesignPicker'
 
 const pages = {
   resumen: { label: 'Resumen', icon: LayoutDashboard },
@@ -36,7 +37,6 @@ function pageFromHash(): Page {
   const value = location.hash.slice(1)
   return Object.hasOwn(pages, value) ? value as Page : 'resumen'
 }
-type Theme = 'system' | 'light' | 'dark'
 const themeOptions: { value: Theme, label: string, icon: LucideIcon }[] = [
   { value: 'system', label: 'Sistema', icon: MonitorSmartphone },
   { value: 'light', label: 'Claro', icon: Sun },
@@ -64,6 +64,7 @@ export default function App() {
   const [allMonths, setAllMonths] = useState(false)
   const [category, setCategory] = useState<CategoryId | null>(null)
   const [theme, setTheme] = useState<Theme>(savedTheme)
+  const [design, setDesign] = useState<Design>(savedDesign)
   const [openingCents, setOpeningCents] = useState(0)
   const [editingOpening, setEditingOpening] = useState<number | null>(null)
   const [entries, setEntries] = useState<Entry[]>([])
@@ -71,7 +72,7 @@ export default function App() {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState('')
   const [editor, setEditor] = useState<EditorDraft | null>(null)
-  const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | 'monthly-alert' | null>(null)
+  const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | 'monthly-alert' | 'designs' | null>(null)
   const [storyMonth, setStoryMonth] = useState<string | null>(null)
   const [seenReport, setSeenReport] = useState(savedSeenReport)
   const [toast, setToast] = useState<{ label: string } | null>(null)
@@ -123,14 +124,18 @@ export default function App() {
   useEffect(() => {
     const media = matchMedia('(prefers-color-scheme: dark)')
     const apply = () => {
-      const dark = theme === 'dark' || (theme === 'system' && media.matches)
-      document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#111b1a' : '#f6f8f6')
+      const root = document.documentElement
+      const dark = design === 'original' ? theme === 'dark' || (theme === 'system' && media.matches) : design !== 'sand'
+      if (design === 'original') delete root.dataset.design
+      else root.dataset.design = design
+      root.dataset.theme = dark ? 'dark' : 'light'
+      const canvas = getComputedStyle(root).getPropertyValue('--canvas').trim()
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', canvas)
     }
     apply()
     media.addEventListener('change', apply)
     return () => media.removeEventListener('change', apply)
-  }, [theme])
+  }, [design, theme])
   useEffect(() => {
     if (!toast) return
     const timer = window.setTimeout(() => setToast(null), 3600)
@@ -151,6 +156,10 @@ export default function App() {
   function changeTheme(next: Theme) {
     setTheme(next)
     try { localStorage.setItem('mi-dinero:theme', next) } catch { /* Keep the choice for this session. */ }
+  }
+  function changeDesign(next: Design) {
+    setDesign(next)
+    try { localStorage.setItem(designKey, next) } catch { /* Keep the design for this session. */ }
   }
   function goTo(next: Page) {
     if (page !== next) location.hash = next
@@ -186,7 +195,12 @@ export default function App() {
       onClick={() => { setUtility(null); if (key === 'movimientos') setCategory(null) }}>
       <Icon size={mobile ? 21 : 19} strokeWidth={1.8} /><span>{pages[key].label}</span></a>
   })
-  const themeControl = <ThemeControl theme={theme} onChange={changeTheme} />
+  const appearance = <>
+    {design === 'original' && <ThemeControl theme={theme} onChange={changeTheme} />}
+    <button className="design-launch" aria-label="Elegir diseño" aria-haspopup="dialog" onClick={() => setUtility('designs')}>
+      <Palette size={16} /><span>Diseños</span><strong>{designLabel(design)}</strong>
+    </button>
+  </>
   const addButton = (mobile: boolean) => <button className={'primary new-button ' + (mobile ? 'mobile-new' : 'desktop-new')}
     aria-label="Nuevo movimiento" onClick={() => add()} disabled={loadState !== 'ready'}><Plus size={19} /><span>{mobile ? 'Nuevo' : 'Nuevo movimiento'}</span></button>
 
@@ -199,7 +213,7 @@ export default function App() {
         <button className="nav-item backup-nav" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={19} />Recordatorios</button>
         <button className="nav-item backup-nav" onClick={() => setUtility('monthly-alert')}><CalendarClock size={19} />Aviso mensual</button>
         <button className="nav-item backup-nav" onClick={() => setUtility('backup')}><Archive size={19} />Copias de seguridad</button>
-        <div className="side-settings"><span className="settings-label">Apariencia</span>{themeControl}</div>
+        <div className="side-settings"><span className="settings-label">Apariencia</span>{appearance}</div>
         <div className="local-status"><span />Datos en este dispositivo</div>
       </div>
     </aside>
@@ -240,11 +254,12 @@ export default function App() {
       <details className="iphone-install"><summary>Instalar en la pantalla de inicio del iPhone</summary>
         <p>Abre Mi Dinero en Safari mediante HTTPS. Pulsa Compartir, elige Añadir a la pantalla de inicio y confirma con Añadir. Si aparece Abrir como app web, déjalo activado.</p>
       </details>
-      <div className="more-theme"><h3>Apariencia</h3>{themeControl}</div>
+      <div className="more-theme"><h3>Apariencia</h3>{appearance}</div>
       <p className="local-note"><Database size={17} />Tus datos se guardan en este dispositivo.</p>
     </Modal>}
     {utility === 'reminders' && <Reminders reminders={reminders} onClose={() => setUtility(null)} onChange={reload} />}
     {utility === 'monthly-alert' && <MonthlyAlert onClose={() => setUtility(null)} />}
+    {utility === 'designs' && <DesignPicker selected={design} originalTheme={theme} onChange={changeDesign} onClose={() => setUtility(null)} />}
     {utility === 'backup' && <Backups ledger={loadState === 'ready' ? { entries, openingCents, reminders } : null} onClose={() => setUtility(null)}
       onRestored={() => { setUtility(null); void reload(); notify('Copia restaurada') }} />}
     {toast && <div className="toast" role="status"><Check size={17} />{toast.label}<button aria-label="Ocultar aviso" onClick={() => setToast(null)}><X size={14} /></button></div>}

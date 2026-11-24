@@ -89,3 +89,9 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - Resumen del mes cerrado con balance, categoría principal, gasto mayor, comparación y saldo al cierre. Se recalcula con los movimientos del dispositivo.
 - Acceso discreto en Resumen, con un punto para el cierre nuevo y navegación por deslizamiento, controles y teclado.
 - Aviso opcional el día 1 a las 09:00 mediante el atajo de Apple o una cita recurrente de calendario.
+
+## Diseños de la interfaz
+
+- El selector de Apariencia ofrece Original, Medianoche, Grafito, Ciruela y Arena, con una vista previa de cada diseño.
+- La elección se guarda en el dispositivo y se aplica desde el arranque. Original conserva el ajuste de color del sistema, claro u oscuro que se usaba antes.
+- La prueba de navegador comprueba los cuatro diseños, la persistencia de la elección y que los movimientos siguen disponibles al cambiar de diseño.
