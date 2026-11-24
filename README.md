@@ -21,6 +21,7 @@ Abre la dirección que muestra Vite en la terminal. Para probar la interfaz desd
 - **Consultar.** El resumen muestra ingresos, gastos y su diferencia. El **saldo al cierre del mes** suma el saldo inicial y todos los movimientos hasta ese mes inclusive. El **saldo total del historial** incluye también los meses posteriores que hayas registrado. Las flechas cambian de mes. Toca el nombre del mes para elegir otro periodo o volver al actual.
 - **Buscar y corregir.** En **Movimientos** puedes buscar por concepto o categoría y filtrar ingresos o gastos. El selector de periodo incluye **Todos los meses**. Toca una fila para editarla o eliminarla con confirmación.
 - **Repetir un movimiento.** Abre un movimiento guardado y pulsa **Duplicar movimiento**. La copia empieza con la fecha de hoy y puedes ajustar sus datos antes de guardarla.
+- **Favoritos con importe.** En **Resumen → Registro rápido → Añadir favorito**, guarda un gasto o ingreso con su importe, categoría y concepto. Al tocar el favorito se abre un movimiento editable con la fecha de hoy. Usa **Gestionar favoritos** para añadir, editar o borrar accesos. Cada dispositivo guarda sus propios favoritos.
 - **Entender los gastos.** **Categorías** ordena los gastos del mes por importe y muestra su porcentaje. Toca una categoría del desglose para consultar los movimientos que la componen.
 - **Apariencia.** La opción inicial sigue el tema del sistema. Puedes elegir claro u oscuro desde la barra lateral o desde **Más** en el móvil.
 
@@ -32,7 +33,7 @@ Abre **Copias de seguridad** desde la barra lateral o el menú **Más**. **Desca
 
 El panel indica la fecha de la última exportación iniciada desde el dispositivo. Si el navegador admite compartir archivos, **Compartir copia** abre el menú del sistema para enviarla o guardarla en **Archivos**.
 
-Para recuperar el historial, pulsa **Elegir archivo** y revisa el número de movimientos, los meses incluidos y el saldo inicial. Puedes pulsar **Descargar copia del historial actual** antes de confirmar **Restaurar copia**. La restauración reemplaza todo el historial de ese dispositivo y su saldo inicial en una sola operación. Las copias de la primera versión se recuperan con saldo inicial de 0 €, que puedes ajustar en Resumen. Si el archivo es inválido, está duplicado internamente o el historial cambia en otra ventana durante la confirmación, la app conserva los datos que ya había.
+Para recuperar el historial, pulsa **Elegir archivo** y revisa los movimientos que se añadirán, modificarán o eliminarán, así como los meses y el saldo inicial. Antes de confirmar puedes **Guardar mi historial actual en Dropbox** si has conectado tu cuenta, o descargarlo al dispositivo. La restauración reemplaza todo el historial de ese dispositivo y su saldo inicial en una sola operación. Las copias de la primera versión se recuperan con saldo inicial de 0 €, que puedes ajustar en Resumen. Si el archivo es inválido, está duplicado internamente o el historial cambia en otra ventana durante la confirmación, la app conserva los datos que ya había.
 
 Cada origen web, perfil del navegador o dispositivo puede tener su propio almacén. Exporta una copia antes de cambiar de móvil, dominio o navegador, o de borrar los datos del sitio. Puedes usarla en la app instalada si esta abre un historial vacío.
 

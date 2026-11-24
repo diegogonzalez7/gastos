@@ -1,12 +1,13 @@
 import { useId, useState } from 'react'
 import {
-  ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Wallet, X,
+  ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Star, Wallet, X,
 } from 'lucide-react'
 import {
   capitalize, categories, categoryIds, dateLabel, displayCategory, money, percent, searchText,
   type CategoryId, type Entry, type Kind, type Summary,
 } from '../ledger'
-import { CategoryBadge, EmptyState, FittedAmount } from './ui'
+import { favoriteName, type Favorite } from '../favorites'
+import { CategoryBadge, EmptyState, FittedAmount, Modal } from './ui'
 
 export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, onEdit: (entry: Entry) => void, showDate?: boolean }) {
   const incoming = entry.kind === 'income'
@@ -42,14 +43,41 @@ export function Balance({ totals }: { totals: Summary }) {
 }
 
 const shortcuts: CategoryId[] = ['food', 'transport', 'meal', 'clothes', 'salary']
-function Shortcuts({ onAdd }: { onAdd: (category?: CategoryId) => void }) {
+function Shortcuts({ onAdd, favorites, onUseFavorite, onManageFavorites }: Pick<DashboardProps, 'onAdd' | 'favorites' | 'onUseFavorite' | 'onManageFavorites'>) {
   return <section className="quick-section" aria-labelledby="quick-title">
-    <h2 id="quick-title">Registro rápido</h2>
+    <div className="quick-heading">
+      <h2 id="quick-title">Registro rápido</h2>
+      <button className="text-button" onClick={onManageFavorites}><Star size={16} />{favorites.length ? 'Gestionar favoritos' : 'Añadir favorito'}</button>
+    </div>
+    {!!favorites.length && <div className="quick-list favorite-list" role="group" aria-label="Movimientos favoritos">
+      {favorites.map(favorite => <button key={favorite.id} className="quick-button favorite-button"
+        aria-label={'Registrar ' + favoriteName(favorite) + ' · ' + money(favorite.cents)} onClick={() => onUseFavorite(favorite)}>
+        <CategoryBadge category={favorite.category} /><span className="favorite-info">
+          <strong>{favoriteName(favorite)}</strong><small className="money">{money(favorite.cents)}</small>
+        </span><Plus size={15} aria-hidden="true" />
+      </button>)}
+    </div>}
     <div className="quick-list">{shortcuts.map(id => <button key={id} className="quick-button"
       aria-label={'Registrar en ' + categories[id].name} onClick={() => onAdd(id)}>
       <CategoryBadge category={id} /><span>{categories[id].name}</span><Plus size={15} aria-hidden="true" />
     </button>)}</div>
   </section>
+}
+
+export function FavoriteManager({ favorites, onEdit, onClose }: {
+  favorites: Favorite[], onEdit: (favorite?: Favorite) => void, onClose: () => void,
+}) {
+  return <Modal title="Tus favoritos" onClose={onClose}>
+    <ul className="favorite-manager">
+      {favorites.map(favorite => <li key={favorite.id}><button className="secondary" onClick={() => onEdit(favorite)}
+        aria-label={'Editar favorito ' + favoriteName(favorite) + ' · ' + money(favorite.cents)}>
+        <CategoryBadge category={favorite.category} /><span className="favorite-info">
+          <strong>{favoriteName(favorite)}</strong><small>{categories[favorite.category].name} · <span className="money">{money(favorite.cents)}</span></small>
+        </span><ChevronRight size={16} />
+      </button></li>)}
+    </ul>
+    <button className="primary wide" onClick={() => onEdit()}><Plus size={16} />Añadir favorito</button>
+  </Modal>
 }
 
 function SpendingRing({ totals }: { totals: Summary }) {
@@ -75,9 +103,12 @@ interface DashboardProps {
   onEdit: (entry: Entry) => void
   onHistory: (category?: CategoryId) => void
   onCategories: () => void
+  favorites: Favorite[]
+  onUseFavorite: (favorite: Favorite) => void
+  onManageFavorites: () => void
 }
 
-export function Dashboard({ account, openingCents, onOpening, totals, entries, onAdd, onEdit, onHistory, onCategories }: DashboardProps) {
+export function Dashboard({ account, openingCents, onOpening, totals, entries, onAdd, onEdit, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
   return <div className="view-stack">
     <Balance totals={totals} />
     <section className="panel account-strip" aria-label="Saldos de la cuenta">
@@ -85,7 +116,7 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, o
       <div><small>Saldo al cierre del mes</small><strong className="money">{money(account.closing)}</strong></div>
       <div><small>Saldo total del historial</small><strong className="money">{money(account.total)}</strong></div>
     </section>
-    <Shortcuts onAdd={onAdd} />
+    <Shortcuts onAdd={onAdd} favorites={favorites} onUseFavorite={onUseFavorite} onManageFavorites={onManageFavorites} />
     <div className="overview-panels">
       <section className="panel recent-panel" aria-labelledby="recent-title">
         <div className="panel-heading"><h2 id="recent-title">Últimos movimientos</h2>

@@ -102,3 +102,9 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - Cada subida crea un archivo independiente. Las copias se pueden buscar y abrir en cualquier dispositivo conectado a la misma cuenta con la misma App key.
 - La restauración de Dropbox comparte la validación, la vista previa y la confirmación de las copias locales.
 - La prueba de navegador simula Dropbox para verificar la transferencia en ambas direcciones y la selección entre varias copias. Queda pendiente conectar una cuenta real desde un iPhone.
+
+## Comparación de copias y favoritos
+
+- La vista previa de restauración, desde archivo o Dropbox, cuenta los movimientos añadidos, modificados y eliminados. Con Dropbox conectado permite subir una copia independiente del historial actual antes de confirmar.
+- Registro rápido admite favoritos editables con importe, categoría y concepto que rellenan un movimiento con la fecha de hoy. Los favoritos se guardan por dispositivo.
+- Las pruebas de navegador cubren el uso y la gestión de favoritos, la comparación de historiales y la copia previa a restaurar con Dropbox simulado.

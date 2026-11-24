@@ -1,16 +1,20 @@
 import { useId, useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Copy, Trash2 } from 'lucide-react'
 import { calendarDay, categories, categoryIds, displayCategory, MAX_CONCEPT, money, monthLabel, newEntryId, parseAmount, validDay, type CategoryId, type Entry, type Kind } from '../ledger'
+import { favoriteName, type Favorite } from '../favorites'
 import { changeEntry, saveEntry, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
 
-export interface EditorDraft { original?: Entry, copy?: Entry, category?: CategoryId, date: string }
+export interface EditorDraft { original?: Entry, copy?: Entry, category?: CategoryId, date: string, favorite?: Favorite, mode?: 'favorite' }
 
-export function Editor({ draft, onClose, onDuplicate, onSaved }: {
+export function Editor({ draft, onClose, onDuplicate, onSaved, onFavorite }: {
   draft: EditorDraft, onClose: () => void, onDuplicate: (entry: Entry) => void, onSaved: (date: string | null, message: string) => void,
+  onFavorite: (id: string, favorite: Favorite | null) => void,
 }) {
   const old = draft.original
-  const source = old ?? draft.copy
+  const editingFavorite = draft.mode === 'favorite'
+  const oldFavorite = editingFavorite ? draft.favorite : undefined
+  const source = old ?? draft.copy ?? draft.favorite
   const initialCategory = source ? displayCategory(source.category) : draft.category ?? 'food'
   const initialKind = categories[initialCategory].kind
   const initialAmount = source ? (source.cents / 100).toFixed(2).replace('.', ',') : ''
@@ -55,10 +59,15 @@ export function Editor({ draft, onClose, onDuplicate, onSaved }: {
     if (busy) return
     const cents = parseAmount(amount)
     if (!cents) { setError('Introduce un importe entre 0,01 € y 999.999.999,99 €, con un máximo de dos decimales.'); return }
-    if (!validDay(date)) { setError('Elige una fecha válida.'); return }
+    if (!editingFavorite && !validDay(date)) { setError('Elige una fecha válida.'); return }
     setBusy(true)
     setError('')
     try {
+      if (editingFavorite) {
+        const id = oldFavorite?.id ?? newEntryId()
+        onFavorite(id, { id, cents, category, concept: concept.trim() })
+        return
+      }
       const entry: Entry = {
         id: old?.id ?? newEntryId(), createdAt: old?.createdAt ?? Date.now(),
         kind, category, concept: concept.trim(), date, cents,
@@ -70,14 +79,18 @@ export function Editor({ draft, onClose, onDuplicate, onSaved }: {
   }
 
   async function remove() {
-    if (!old || busy) return
+    if ((!old && !oldFavorite) || busy) return
     setBusy(true)
     setError('')
-    try { await changeEntry(old, null); onSaved(null, 'Movimiento eliminado') }
+    try {
+      if (oldFavorite) onFavorite(oldFavorite.id, null)
+      else if (old) { await changeEntry(old, null); onSaved(null, 'Movimiento eliminado') }
+    }
     catch (err) { setError(storageMessage(err)); setBusy(false) }
   }
 
-  const title = discard ? '¿Descartar cambios?' : confirmDelete ? 'Eliminar movimiento'
+  const title = discard ? '¿Descartar cambios?' : confirmDelete ? (oldFavorite ? 'Eliminar favorito' : 'Eliminar movimiento')
+    : editingFavorite ? (oldFavorite ? 'Editar favorito' : 'Nuevo favorito')
     : old ? 'Editar movimiento' : draft.copy ? 'Duplicar movimiento' : 'Nuevo movimiento'
   return <Modal title={title} onClose={requestClose} busy={busy}>
     {discard ? <div className="confirm-panel">
@@ -86,8 +99,9 @@ export function Editor({ draft, onClose, onDuplicate, onSaved }: {
         <button className="secondary" autoFocus onClick={() => setDiscard(null)}>Seguir editando</button>
         <button className="danger" onClick={() => leave(discard)}>Descartar cambios</button>
       </div>
-    </div> : confirmDelete && old ? <div className="confirm-panel">
-      <p>Se eliminará <strong>{old.concept || categories[old.category].name}</strong> (<span className="money">{money(old.cents)}</span>) de tu historial.</p>
+    </div> : confirmDelete && (old || oldFavorite) ? <div className="confirm-panel">
+      {oldFavorite ? <p>Se quitará <strong>{favoriteName(oldFavorite)}</strong> de Registro rápido.</p>
+        : old && <p>Se eliminará <strong>{old.concept || categories[old.category].name}</strong> (<span className="money">{money(old.cents)}</span>) de tu historial.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={() => { setConfirmDelete(false); setError('') }}>Cancelar</button>
@@ -99,23 +113,23 @@ export function Editor({ draft, onClose, onDuplicate, onSaved }: {
         <button type="button" aria-pressed={kind === 'income'} onClick={() => selectKind('income')}><ArrowDownLeft size={18} />Ingreso</button>
       </div>
       <AmountInput label="Importe" value={amount} onChange={setAmount} />
-      <div className={'entry-date' + (differentMonth ? ' different-month' : '')}>
+      {!editingFavorite && <div className={'entry-date' + (differentMonth ? ' different-month' : '')}>
         <label className="field">Fecha<input type="date" name="date" required min="0001-01-01" max="9999-12-31"
           aria-describedby={differentMonth ? monthHintId : undefined} value={date} onChange={e => setDate(e.target.value)} /></label>
         <button className="secondary" type="button" disabled={date === today} onClick={() => setDate(today)}>Hoy</button>
         {differentMonth && <p id={monthHintId}>Mes del movimiento: <strong>{monthLabel(selectedMonth)}</strong></p>}
-      </div>
+      </div>}
       <label className="field">Concepto (opcional)<input name="concept" type="text" inputMode="text" placeholder={kind === 'expense' ? 'Ej. Compra de la semana' : 'Ej. Nómina de este mes'}
         maxLength={MAX_CONCEPT} value={concept} onChange={e => setConcept(e.target.value)} /></label>
       <label className="field">Categoría<select value={category} onChange={e => setCategory(e.target.value as CategoryId)}>
         {(categoryIds.includes(category) ? categoryIds : [category, ...categoryIds]).filter(id => categories[id].kind === kind).map(id => <option key={id} value={id}>{categories[id].name}</option>)}</select></label>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <button className="primary wide" type="submit" disabled={busy}>{busy ? 'Guardando…' : old ? 'Guardar cambios' : 'Guardar movimiento'}</button>
-      {old && <div className="editor-actions">
-        <button className="text-button" type="button" disabled={busy} onClick={() => dirty ? setDiscard('duplicate') : leave('duplicate')}>
-          <Copy size={15} />Duplicar movimiento</button>
+      <button className="primary wide" type="submit" disabled={busy}>{busy ? 'Guardando…' : editingFavorite ? 'Guardar favorito' : old ? 'Guardar cambios' : 'Guardar movimiento'}</button>
+      {(old || oldFavorite) && <div className="editor-actions">
+        {old && <button className="text-button" type="button" disabled={busy} onClick={() => dirty ? setDiscard('duplicate') : leave('duplicate')}>
+          <Copy size={15} />Duplicar movimiento</button>}
         <button className="text-button delete-link" type="button" disabled={busy} onClick={() => { setError(''); setConfirmDelete(true) }}>
-          <Trash2 size={15} />Eliminar movimiento</button>
+          <Trash2 size={15} />{oldFavorite ? 'Eliminar favorito' : 'Eliminar movimiento'}</button>
       </div>}
     </form>}
   </Modal>

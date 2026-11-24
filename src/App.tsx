@@ -12,7 +12,8 @@ import { Backups } from './components/Backups'
 import { MonthControl } from './components/Calendar'
 import { OpeningBalance } from './components/OpeningBalance'
 import { Editor, type EditorDraft } from './components/Editor'
-import { CategoryView, Dashboard, History } from './components/LedgerViews'
+import { CategoryView, Dashboard, FavoriteManager, History } from './components/LedgerViews'
+import { favoritesKey, readFavorites, saveFavorite, type Favorite } from './favorites'
 import { Reminders } from './components/Reminders'
 import { MonthlyAlert } from './components/MonthlyAlert'
 import { MonthlyStory, MonthlyStoryLink } from './components/MonthlyStory'
@@ -72,7 +73,8 @@ export default function App() {
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState('')
   const [editor, setEditor] = useState<EditorDraft | null>(null)
-  const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | 'monthly-alert' | 'designs' | null>(null)
+  const [favorites, setFavorites] = useState(readFavorites)
+  const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | 'monthly-alert' | 'designs' | 'favorites' | null>(null)
   const [storyMonth, setStoryMonth] = useState<string | null>(null)
   const [seenReport, setSeenReport] = useState(savedSeenReport)
   const [toast, setToast] = useState<{ label: string } | null>(null)
@@ -93,6 +95,13 @@ export default function App() {
     }
   }, [])
   useEffect(() => { void reload(); return watchEntries(reload) }, [reload])
+  useEffect(() => {
+    const refreshFavorites = (event: StorageEvent) => {
+      if (event.key === favoritesKey || event.key === null) setFavorites(readFavorites())
+    }
+    window.addEventListener('storage', refreshFavorites)
+    return () => window.removeEventListener('storage', refreshFavorites)
+  }, [])
   useEffect(() => {
     let timer: number
     function refreshDay() {
@@ -176,6 +185,15 @@ export default function App() {
     setEditor({ date, category: id })
   }
   function edit(entry: Entry) { setEditor({ date: entry.date, original: entry }) }
+  function editFavorite(favorite?: Favorite) {
+    setUtility(null)
+    setEditor({ date: calendarDay(), favorite, mode: 'favorite' })
+  }
+  function changeFavorite(id: string, favorite: Favorite | null) {
+    setFavorites(saveFavorite(id, favorite))
+    setEditor(null)
+    notify(favorite ? 'Favorito guardado' : 'Favorito eliminado')
+  }
   function saved(date: string | null, message: string) {
     if (date) setMonth(date.slice(0, 7))
     setEditor(null)
@@ -231,6 +249,8 @@ export default function App() {
             {page === 'resumen' ? <>
               <div className="monthly-story-entry"><MonthlyStoryLink month={reportLinkMonth} unread={unreadReport} onClick={openMonthlyStory} /></div>
               <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={monthEntries} totals={totals} onAdd={add} onEdit={edit}
+                favorites={favorites} onUseFavorite={favorite => setEditor({ date: calendarDay(), favorite })}
+                onManageFavorites={() => favorites.length ? setUtility('favorites') : editFavorite()}
                 onHistory={showHistory} onCategories={() => goTo('categorias')} />
             </>
             : page === 'movimientos' ? <History entries={wholeHistory ? entries : monthEntries} category={category} onClearCategory={() => setCategory(null)}
@@ -244,7 +264,8 @@ export default function App() {
     {editingOpening !== null && <OpeningBalance original={editingOpening} onClose={() => setEditingOpening(null)}
       onSaved={() => { setEditingOpening(null); void reload(); notify('Saldo inicial guardado') }} />}
     {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} onClose={() => setEditor(null)}
-      onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} />}
+      onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} onFavorite={changeFavorite} />}
+    {utility === 'favorites' && <FavoriteManager favorites={favorites} onEdit={editFavorite} onClose={() => setUtility(null)} />}
     {report && <MonthlyStory key={report.month} report={report} onClose={() => setStoryMonth(null)}
       onHistory={() => { setStoryMonth(null); setMonth(report.month); showHistory() }} />}
     {utility === 'more' && <Modal title="Más opciones" onClose={() => setUtility(null)}>
