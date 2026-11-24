@@ -394,6 +394,8 @@ test('el saldo bancario separa el efectivo y las retiradas del balance mensual a
   await dialog.getByLabel('Importe', { exact: true }).fill('20')
   await dialog.getByLabel('Fecha').fill('2026-11-19')
   await dialog.getByRole('button', { name: 'Guardar movimiento' }).click()
+  await expect(dialog).toHaveCount(0)
+  await verifyBank('80,00')
   await page.reload()
   await verifyBank('80,00')
   await balance(page, '-8,42€')
