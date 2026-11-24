@@ -10,16 +10,20 @@
     <link rel="icon" type="image/png" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch.png" />
     <title>Mi Dinero</title>
-    <style>.startup{z-index:10;color:#182d2b;text-align:center;background:#f6f8f6;place-items:center;font-family:system-ui,sans-serif;transition:opacity .18s ease-out,visibility .18s;display:grid;position:fixed;inset:0}:root[data-theme=dark] .startup{color:#edf4ef;background:#111b1a}:root[data-app-ready] .startup{opacity:0;visibility:hidden;pointer-events:none}.startup img{border-radius:20px;margin:0 auto 16px;display:block}.startup strong{letter-spacing:-.04em;font-size:28px;display:block}.startup small{opacity:.75;margin-top:8px;font-size:13px;display:block}@media (prefers-reduced-motion:reduce){.startup{transition:none}}</style>
+    <style>.startup{z-index:10;background:var(--canvas,#f6f8f6);color:var(--text,#182d2b);text-align:center;place-items:center;font-family:system-ui,sans-serif;transition:opacity .18s ease-out,visibility .18s;display:grid;position:fixed;inset:0}:root[data-theme=dark] .startup{background:var(--canvas,#111b1a);color:var(--text,#edf4ef)}:root[data-app-ready] .startup{opacity:0;visibility:hidden;pointer-events:none}.startup img{border-radius:20px;margin:0 auto 16px;display:block}.startup strong{letter-spacing:-.04em;font-size:28px;display:block}.startup small{opacity:.75;margin-top:8px;font-size:13px;display:block}@media (prefers-reduced-motion:reduce){.startup{transition:none}}</style>
     <noscript><style>.startup{display:none}</style></noscript>
     <script>
       try {
         var choice = localStorage.getItem('mi-dinero:theme')
-        document.documentElement.dataset.theme = choice === 'dark' || (choice !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
+        var design = localStorage.getItem('mi-dinero:design')
+        var custom = ['midnight', 'graphite', 'plum', 'sand'].includes(design)
+        if (custom) document.documentElement.dataset.design = design
+        var dark = custom ? design !== 'sand' : choice === 'dark' || (choice !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
       } catch {}
     </script>
-    <script type="module" crossorigin src="./assets/index-BtIkzPBh.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-3ztCZCUb.css">
+    <script type="module" crossorigin src="./assets/index-sVKjY2Un.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-NW3PBV-v.css">
   <link rel="manifest" href="./manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="./registerSW.js" defer></script></head>
   <body>
     <div class="startup" role="status" aria-label="Cargando Mi Dinero">
