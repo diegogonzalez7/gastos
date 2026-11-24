@@ -13,6 +13,8 @@ interface CalendarProps {
 export function MonthControl({ month, allMonths, allowAll, onChange }: CalendarProps) {
   const [open, setOpen] = useState(false)
   const [year, setYear] = useState(Number(month.slice(0, 4)))
+  const label = allMonths ? 'Todos los meses' : monthLabel(month).replace(' de ', ' ')
+  const compactLabel = allMonths ? 'Todos' : capitalize(dateLabel(month + '-01', { month: 'short' })) + ' ' + Number(month.slice(0, 4))
   function select(value: string, all = false) {
     onChange(value, all)
     setOpen(false)
@@ -21,9 +23,9 @@ export function MonthControl({ month, allMonths, allowAll, onChange }: CalendarP
     <div className="month-control" role="group" aria-label="Periodo">
       <button type="button" className="month-step" aria-label="Mes anterior" disabled={allMonths || month === '0001-01'}
         onClick={() => onChange(shiftMonth(month, -1))}><ChevronLeft size={17} /></button>
-      <button type="button" className="month-label" aria-label="Elegir periodo" aria-haspopup="dialog"
+      <button type="button" className="month-label" aria-label="Elegir periodo" aria-description={label} title={label} aria-haspopup="dialog"
         onClick={() => { setYear(Number(month.slice(0, 4))); setOpen(true) }}>
-        <CalendarDays size={15} /><span>{allMonths ? 'Todos los meses' : monthLabel(month).replace(' de ', ' ')}</span><ChevronDown size={13} />
+        <CalendarDays size={15} /><span className="month-full">{label}</span><span className="month-compact">{compactLabel}</span><ChevronDown size={13} />
       </button>
       <button type="button" className="month-step" aria-label="Mes siguiente" disabled={allMonths || month === '9999-12'}
         onClick={() => onChange(shiftMonth(month, 1))}><ChevronRight size={17} /></button>

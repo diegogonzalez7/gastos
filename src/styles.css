@@ -103,7 +103,7 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .mobile-top, .mobile-nav { display: none; }
 .main-content { margin-left: var(--side-width); outline: 0; }
 .main-inner { max-width: 1500px; margin: 0 auto; padding: clamp(28px, 3.1vw, 53px) clamp(22px, 3vw, 55px) 42px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 27px; }
+.page-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 18px; margin-bottom: 27px; }
 .page-header p { margin-top: 7px; font-size: 14px; color: var(--muted); }
 .header-actions { display: flex; align-items: center; gap: 12px; }
 .primary, .secondary, .danger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 43px; padding: 10px 16px; border: 1px solid transparent; border-radius: 11px; font-weight: 630; font-size: 14px; line-height: 1.35; }
@@ -115,11 +115,14 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .danger:hover:not(:disabled) { background: #893730; }
 .new-button { white-space: nowrap; box-shadow: 0 2px 4px rgb(21 85 63 / 9%); }
 .icon-button { height: 36px; width: 36px; border-radius: 10px; display: inline-grid; place-items: center; color: var(--secondary); }
-.month-control { display: flex; align-items: center; padding: 1px 2px; min-width: 0; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: var(--shadow); }
+.month-control { display: flex; align-items: center; width: 236px; padding: 1px 2px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: var(--shadow); }
 .month-control button { min-height: 39px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
 .month-control button:hover:not(:disabled) { background: var(--surface-soft); }
-.month-step { width: 31px; padding: 0; color: var(--muted); }
-.month-label { gap: 7px; padding: 0 5px; font-size: 13px; font-weight: 590; white-space: nowrap; }
+.month-step { flex: 0 0 31px; padding: 0; color: var(--muted); }
+.month-label { flex: 1; min-width: 0; gap: 7px; padding: 0 5px; font-size: 13px; font-weight: 590; white-space: nowrap; }
+.month-label span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.month-compact { display: none; }
+.new-label-compact { display: none; }
 .month-label svg:first-child { color: var(--muted); }
 .month-label svg:last-child { opacity: .6; }
 .view-stack { display: grid; gap: 29px; }
@@ -359,8 +362,6 @@ input::placeholder { color: var(--muted); opacity: .85; }
   .brand img { width: 34px; height: 34px; }
   .nav-item { padding: 10px 8px; gap: 8px; }
   .backup-nav { font-size: 12px; }
-  .page-header { flex-wrap: wrap; }
-  .page-header > div:first-child { flex: 1; }
   .header-actions { gap: 7px; }
   .month-label svg:first-child { display: none; }
   .new-button { padding-inline: 11px; }
@@ -425,13 +426,17 @@ input::placeholder { color: var(--muted); opacity: .85; }
   .available-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toast { left: 50%; bottom: calc(66px + env(safe-area-inset-bottom)); }
 }
+@media (min-width: 761px) and (max-width: 840px) {
+  .desktop-new .new-label-full { display: none; }
+  .desktop-new .new-label-compact { display: inline; }
+}
 @media (max-width: 520px) {
-  .page-header { flex-wrap: wrap; }
-  h1 { font-size: 30px; }
-  .month-control { padding: 0; }
+  .page-header { gap: 8px; }
+  h1 { font-size: clamp(22px, 7vw, 30px); }
+  .month-control { width: clamp(145px, 49.5vw, 196px); padding: 0; }
   .month-label { font-size: 12px; gap: 4px; padding: 0 2px; }
   .month-label svg:first-child { display: none; }
-  .month-step { width: 37px; }
+  .month-step { flex-basis: 34px; }
   .month-control button { min-height: 43px; }
   .balance-card { min-height: 196px; padding: 21px; }
   .balance-content { width: 100%; }
@@ -452,10 +457,12 @@ input::placeholder { color: var(--muted); opacity: .85; }
   .date-group .entry-row { padding-inline: 14px; }
   .entry-row { gap: 9px; }
 }
+@media (max-width: 384px) {
+  .month-full { display: none; }
+  .month-compact { display: inline; }
+}
 @media (max-width: 350px) {
   .main-inner { padding-inline: 12px; }
-  .page-header { align-items: flex-start; }
-  .header-actions { width: 100%; }
   .balance-card { padding: 17px; }
   .hero-wallet { width: 27%; }
   .available-categories { grid-template-columns: 1fr; }

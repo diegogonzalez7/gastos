@@ -226,7 +226,9 @@ export default function App() {
     </button>
   </>
   const addButton = (mobile: boolean) => <button className={'primary new-button ' + (mobile ? 'mobile-new' : 'desktop-new')}
-    aria-label="Nuevo movimiento" onClick={() => add()} disabled={loadState !== 'ready'}><Plus size={19} /><span>{mobile ? 'Nuevo' : 'Nuevo movimiento'}</span></button>
+    aria-label="Nuevo movimiento" onClick={() => add()} disabled={loadState !== 'ready'}>
+    <Plus size={19} />{mobile ? <span>Nuevo</span> : <><span className="new-label-full">Nuevo movimiento</span><span className="new-label-compact">Nuevo</span></>}
+  </button>
 
   return <div className="app-shell" inert={loadState === 'loading'}>
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>Saltar al contenido</a>
