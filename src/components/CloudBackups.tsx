@@ -1,22 +1,22 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Cloud, CloudDownload, CloudUpload, ExternalLink, Search } from 'lucide-react'
 import {
-  connectDropbox, downloadDropboxBackup, dropboxAuthorization, listDropboxBackups, prepareDropbox,
-  saveDropbox, uploadDropboxBackup, type CloudBackup, type DropboxSettings,
+  connectDropbox, downloadDropboxBackup, dropboxAuthorization, dropboxBackupLimit, listDropboxBackups, prepareDropbox,
+  saveDropbox, type CloudBackup, type DropboxSettings,
 } from '../dropbox'
 
 const backupDate = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'medium' })
 
-export function CloudBackups({ settings, onSettings, busy, run, makeFile, review, onUploaded }: {
+export function CloudBackups({ settings, onSettings, busy, run, files, onFiles, review, onUpload, feedback }: {
   settings: DropboxSettings, onSettings: (settings: DropboxSettings) => void,
-  busy: boolean, run: (operation: () => Promise<void>) => void, makeFile: () => Promise<File>,
-  review: (file: string, text: string) => Promise<void>, onUploaded: () => void,
+  busy: boolean, run: (operation: () => Promise<void>) => void,
+  files: CloudBackup[] | null, onFiles: (files: CloudBackup[] | null) => void,
+  review: (file: string, text: string) => Promise<void>, onUpload: () => Promise<void>, feedback: ReactNode,
 }) {
   const authorization = dropboxAuthorization(settings)
   const [showSetup, setShowSetup] = useState(!!settings.pending)
   const [appKey, setAppKey] = useState(settings.appKey)
   const [code, setCode] = useState('')
-  const [files, setFiles] = useState<CloudBackup[] | null>(null)
 
   function remember(next: DropboxSettings) {
     saveDropbox(next)
@@ -41,17 +41,14 @@ export function CloudBackups({ settings, onSettings, busy, run, makeFile, review
     <div>
       <h3>Copias en Dropbox</h3>
       {settings.refreshToken ? <>
-        <p>Sube una copia de este dispositivo o busca las guardadas con la misma cuenta.</p>
+        <p>Dropbox conserva las {dropboxBackupLimit} copias más recientes de Mi Dinero.</p>
         <div className="backup-actions">
+          <button className="secondary" disabled={busy} onClick={() => run(onUpload)}><CloudUpload size={16} />Subir copia a la nube</button>
           <button className="secondary" disabled={busy} onClick={() => run(async () => {
-            await uploadDropboxBackup(settings, await makeFile())
-            setFiles(null)
-            onUploaded()
-          })}><CloudUpload size={16} />Subir copia a la nube</button>
-          <button className="secondary" disabled={busy} onClick={() => run(async () => {
-            setFiles(await listDropboxBackups(settings))
+            onFiles(await listDropboxBackups(settings))
           })}><Search size={16} />Buscar copias en la nube</button>
         </div>
+        {feedback}
         {files?.length === 0 && <p className="cloud-backup-empty" role="status">Todavía no hay copias guardadas en esta carpeta de Dropbox.</p>}
         {!!files?.length && <ul className="cloud-backup-list" aria-label="Copias guardadas en Dropbox">
           {files.map(file => <li key={file.id}><button className="secondary" disabled={busy}
@@ -61,7 +58,7 @@ export function CloudBackups({ settings, onSettings, busy, run, makeFile, review
         </ul>}
         <button className="cloud-disconnect" disabled={busy} onClick={() => run(async () => {
           remember({ appKey: settings.appKey })
-          setFiles(null)
+          onFiles(null)
         })}>Desconectar Dropbox en este dispositivo</button>
       </> : <>
         <p>Usa la misma cuenta en el iPhone y en el ordenador. Las copias se guardan en la carpeta privada de la aplicación.</p>
@@ -93,6 +90,7 @@ export function CloudBackups({ settings, onSettings, busy, run, makeFile, review
               <button className="secondary" disabled={busy} type="button" onClick={() => setShowSetup(false)}>Cancelar conexión</button>
             </div>
           </form>}
+        {feedback}
       </>}
     </div>
   </div>

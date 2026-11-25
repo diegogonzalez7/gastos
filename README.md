@@ -53,6 +53,8 @@ Cada origen web, perfil del navegador o dispositivo puede tener su propio almac�
 
 Mi Dinero usa una carpeta privada de Dropbox. Puedes usar una cuenta gratuita y acceder desde el navegador o la app instalada. Las copias subidas son archivos JSON legibles en tu Dropbox y cada subida crea un archivo nuevo. El historial de trabajo se sigue guardando en el dispositivo.
 
+Después de confirmar una subida, Mi Dinero muestra un aviso junto al botón y conserva las cinco copias más recientes subidas desde la app, incluidas las creadas antes de restaurar. Si Dropbox guarda la copia nueva y falla al eliminar las antiguas, el panel confirma la subida y te avisa de que volverá a intentar la limpieza en la próxima subida.
+
 1. En el ordenador abre la [consola de aplicaciones de Dropbox](https://www.dropbox.com/developers/apps) con la cuenta con la que guardarás las copias. Crea una aplicación con **Scoped access** y **App folder**. Elige un nombre único, por ejemplo `Copias Mi Dinero Diego`.
 2. En **Permissions**, marca `files.metadata.read`, `files.content.read` y `files.content.write`. Pulsa **Submit** para guardar. En **Settings**, copia **App key**. Para configurar Mi Dinero solo necesitas la **App key**. Conserva el **App secret** en Dropbox.
 3. En **Copias de seguridad → Conectar con Dropbox**, pega la **App key** y pulsa **Continuar → Abrir Dropbox**. Autoriza el acceso, copia el código que te muestra Dropbox y vuelve a Mi Dinero para pegarlo y pulsar **Conectar cuenta**. Hazlo una vez en cada dispositivo con la misma App key y cuenta. El paso del código permite volver a la PWA instalada desde el navegador que abre Dropbox en el iPhone.

@@ -1,6 +1,6 @@
-import { useState, type ChangeEvent } from 'react'
-import { CloudUpload, Download, FileCheck2, FolderOpen, HardDrive, Share2, Upload } from 'lucide-react'
-import { savedDropbox, uploadDropboxBackup } from '../dropbox'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { CircleCheck, CloudUpload, Download, FileCheck2, FolderOpen, HardDrive, Share2, Upload } from 'lucide-react'
+import { savedDropbox, uploadDropboxBackup, type CloudBackup } from '../dropbox'
 import { downloadFile } from '../files'
 import { calendarDay, compareEntries, dateLabel, makeBackup, monthLabel, readBackup, money, validDay, type BackupExtras, type Ledger } from '../ledger'
 import { readLedger, restoreLedger, storageMessage } from '../storage'
@@ -42,6 +42,11 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [dropbox, setDropbox] = useState(savedDropbox)
+  const [cloudFiles, setCloudFiles] = useState<CloudBackup[] | null>(null)
+  const [cloudNotice, setCloudNotice] = useState('')
+  const [cloudWarning, setCloudWarning] = useState(false)
+  const [cloudError, setCloudError] = useState('')
+  const cloudSuccessRef = useRef<HTMLParagraphElement>(null)
   const [lastExport, setLastExport] = useState(readLastExport)
   const [includeFavorites, setIncludeFavorites] = useState(false)
   const [includeSettings, setIncludeSettings] = useState(false)
@@ -53,6 +58,10 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
     file: string, ledger: Ledger & BackupExtras, current: BackupSnapshot, months: string | null, changes: ReturnType<typeof compareEntries>,
   } | null>(null)
 
+  useEffect(() => {
+    if (cloudNotice) cloudSuccessRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [cloudNotice])
+
   function backupFile(snapshot: BackupSnapshot, beforeRestoring = false) {
     const prefix = beforeRestoring ? 'mi-dinero-antes-de-restaurar-' : 'mi-dinero-'
     const extras = {
@@ -62,7 +71,7 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
     return new File([JSON.stringify(makeBackup(snapshot, extras), null, 2)], prefix + calendarDay() + '.json', { type: backupType })
   }
 
-  function recordExport(message: string) {
+  function recordExport(message = '') {
     const date = calendarDay()
     setLastExport(date)
     try { localStorage.setItem(lastExportKey, date) } catch { /* Export also works without Web Storage. */ }
@@ -128,8 +137,9 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
     setCloudBusy(true)
     setError('')
     setNotice('')
+    clearCloudFeedback()
     try { await operation() }
-    catch (err) { setError(err instanceof Error ? err.message : 'No se ha podido completar la operación en Dropbox.') }
+    catch (err) { setCloudError(err instanceof Error ? err.message : 'No se ha podido completar la operación en Dropbox.') }
     finally { setBusy(false); setCloudBusy(false) }
   }
 
@@ -147,17 +157,33 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
     catch (err) { setError(storageMessage(err)); setBusy(false) }
   }
 
-  function protectInDropbox() {
-    if (!preview) return
-    void runCloud(async () => {
-      await uploadDropboxBackup(dropbox, backupFile(await latestLedger(), true), true)
-      recordExport('Historial actual guardado en Dropbox. Puedes continuar con la restauración.')
-    })
+  async function uploadToDropbox(beforeRestoring = false) {
+    const file = backupFile(await latestLedger(), beforeRestoring)
+    const { rotation } = await uploadDropboxBackup(dropbox, file, beforeRestoring)
+    recordExport()
+    setCloudFiles(null)
+    setCloudNotice(beforeRestoring
+      ? 'Historial actual guardado en Dropbox.'
+      : 'Copia subida a Dropbox.')
+    setCloudWarning(!await rotation)
+  }
+
+  function clearCloudFeedback() {
+    setCloudNotice('')
+    setCloudWarning(false)
+    setCloudError('')
   }
 
   const refundsCount = preview?.ledger.entries.reduce((total, entry) => total + (entry.refunds?.length ?? 0), 0) ?? 0
 
-  function dismissPreview() { setPreview(null); setError(''); setNotice('') }
+  function dismissPreview() { setPreview(null); setError(''); setNotice(''); clearCloudFeedback() }
+
+  const cloudFeedback = <>
+    {cloudBusy && !cloudNotice && <p className="export-notice" role="status">Procesando solicitud de Dropbox…</p>}
+    {cloudNotice && <p ref={cloudSuccessRef} className="cloud-upload-success" role="status"><CircleCheck size={17} aria-hidden="true" />{cloudNotice}</p>}
+    {cloudWarning && <p className="entry-hint" role="status">Quedaron copias antiguas en Dropbox. Mi Dinero volverá a intentar la limpieza en la próxima subida.</p>}
+    {cloudError && <p className="form-error backup-feedback" role="alert">{cloudError}</p>}
+  </>
 
   return <Modal title={preview ? 'Confirmar restauración' : 'Copias de seguridad'} onClose={onClose} onBack={preview ? dismissPreview : onBack} busy={busy}>
     {preview && <div className="confirm-panel">
@@ -185,13 +211,14 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
       </fieldset>}
       {(preview.current.entries.length > 0 || preview.current.openingCents !== 0 || !!preview.current.reminders?.length || restoreFavorites || restoreSettings) &&
         <div className="backup-actions save-before-restore">
-          {dropbox.refreshToken && <button className="secondary" disabled={busy} onClick={protectInDropbox}>
+          {dropbox.refreshToken && <button className="secondary" disabled={busy} onClick={() => runCloud(() => uploadToDropbox(true))}>
             <CloudUpload size={16} />Guardar mi historial actual en Dropbox
           </button>}
           <button className="secondary" disabled={busy} onClick={() => download(true)}>
             <Download size={16} />Descargar copia del historial actual
           </button>
         </div>}
+      {cloudFeedback}
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={dismissPreview}>Cancelar</button>
         <button className="primary" disabled={busy} onClick={restore}>{busy && !cloudBusy ? 'Restaurando…' : 'Restaurar copia'}</button>
@@ -204,8 +231,8 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
         <label><input type="checkbox" checked={includeFavorites} disabled={busy} onChange={event => setIncludeFavorites(event.target.checked)} />Incluir favoritos</label>
         <label><input type="checkbox" checked={includeSettings} disabled={busy} onChange={event => setIncludeSettings(event.target.checked)} />Incluir ajustes de tema, diseño y mes de inicio</label>
       </fieldset>
-      <CloudBackups settings={dropbox} onSettings={setDropbox} busy={busy} run={runCloud} makeFile={async () => backupFile(await latestLedger())} review={review}
-        onUploaded={() => recordExport('Copia subida a la carpeta privada de Dropbox.')} />
+      <CloudBackups settings={dropbox} onSettings={setDropbox} busy={busy} run={runCloud} files={cloudFiles}
+        onFiles={setCloudFiles} review={review} onUpload={uploadToDropbox} feedback={!preview && cloudFeedback} />
       <div className="backup-option"><span className="utility-icon"><Download size={21} /></span>
         <div><h3>Exportar copia</h3><p>Guarda tus movimientos, saldo inicial y recordatorios en un archivo JSON.</p>
           {lastExport && <p>Última exportación: <time dateTime={lastExport}>{dateLabel(lastExport, { dateStyle: 'long' })}</time></p>}
@@ -221,7 +248,6 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
             <input type="file" aria-label="Archivo de copia" accept=".json,application/json" disabled={busy} onChange={chooseFile} /></label></div>
       </div>
     </div></div>
-    {cloudBusy && <p className="export-notice" role="status">Procesando solicitud de Dropbox…</p>}
     {error && <p className="form-error backup-feedback" role="alert">{error}</p>}
     {notice && <p className="export-notice" role="status">{notice}</p>}
   </Modal>

@@ -103,6 +103,7 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - Conexión opcional desde Copias de seguridad a una carpeta privada de Dropbox con autorización PKCE y una App key de uso personal.
 - Cada subida crea un archivo independiente. Las copias se pueden buscar y abrir en cualquier dispositivo conectado a la misma cuenta con la misma App key.
 - La restauración de Dropbox comparte la validación, la vista previa y la confirmación de las copias locales.
+- [x] Dropbox conserva las cinco copias más recientes de Mi Dinero tras cada subida. El panel confirma el guardado junto al botón y avisa si queda pendiente eliminar una copia antigua.
 - La prueba de navegador simula Dropbox para verificar la transferencia en ambas direcciones y la selección entre varias copias. Queda pendiente conectar una cuenta real desde un iPhone.
 
 ## Comparación de copias y favoritos

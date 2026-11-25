@@ -386,7 +386,7 @@ test('la PWA abre bajo una subruta y el libro funciona sin red', async ({ page, 
 test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos', async ({ page, context, browser, baseURL }) => {
   const appKey = 'mi-dinero-pruebas'
   const challenges = new Map<string, string>()
-  const cloud = new Map<string, { name: string, server_modified: string, contents: string }>()
+  const cloud = new Map<string, { name: string, server_modified: string, rev: string, contents: string }>()
 
   async function fakeDropbox(target: BrowserContext) {
     await target.route('https://api.dropboxapi.com/oauth2/token', async route => {
@@ -411,7 +411,7 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
       if (endpoint.startsWith('list_folder')) {
         const next = endpoint.endsWith('/continue')
         expect(request.postDataJSON()).toEqual(next ? { cursor: 'test-cursor' } : { path: '', limit: 100 })
-        const entries = Array.from(cloud, ([id, { name, server_modified }]) => ({ '.tag': 'file', id, name, server_modified }))
+        const entries = Array.from(cloud, ([id, { name, server_modified, rev }]) => ({ '.tag': 'file', id, name, server_modified, rev }))
         await route.fulfill({ json: {
           entries: next ? entries.slice(1) : [{ '.tag': 'file', id: 'otro', name: 'otro.json' }, ...entries.slice(0, 1)],
           has_more: !next && entries.length > 1, cursor: 'test-cursor',
@@ -425,8 +425,9 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
           expect(name).toMatch(/^mi-dinero-\S+\.json$/)
           expect(Array.from(cloud.values()).some(file => file.name === name)).toBe(false)
           const server_modified = new Date(Date.UTC(2026, 10, 24, 12, cloud.size)).toISOString()
-          cloud.set(id, { name, server_modified, contents: request.postData()! })
-          await route.fulfill({ json: { id, name, server_modified } })
+          const rev = 'rev-' + id
+          cloud.set(id, { name, server_modified, rev, contents: request.postData()! })
+          await route.fulfill({ json: { id, name, server_modified, rev } })
         } else {
           expect(endpoint).toBe('download')
           await route.fulfill({ body: cloud.get(args.path)!.contents, contentType: 'application/octet-stream' })
@@ -466,7 +467,7 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
     const upload = (target: Page) => target.getByRole('button', { name: 'Subir copia a la nube' }).click()
     await page.getByRole('checkbox', { name: /Incluir ajustes/ }).check()
     await upload(page)
-    await expect(page.getByText('Copia subida a la carpeta privada de Dropbox.')).toBeVisible()
+    await expect(page.getByText('Copia subida a Dropbox.')).toBeInViewport()
     expect(JSON.parse(cloud.get('id:copy-1')!.contents).settings).toEqual({ historyStart: '2026-01', theme: 'system', design: 'original' })
 
     await connect(second, 'codigo-pc')
@@ -485,7 +486,7 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
     await add(second, 'Comida desde el PC', '9', '2026-11-24', 'meal')
     await backups(second)
     await upload(second)
-    await expect(second.getByText('Copia subida a la carpeta privada de Dropbox.')).toBeVisible()
+    await expect(second.getByText('Copia subida a Dropbox.')).toBeInViewport()
 
     await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
     await page.reload()
@@ -506,7 +507,7 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
       expect.objectContaining({ concept: 'Café desde el móvil', cents: 100 }),
     ]))
     await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
-    await expect(page.getByRole('list', { name: 'Copias guardadas en Dropbox' })).toBeVisible()
+    await expect(page.getByRole('list', { name: 'Copias guardadas en Dropbox' })).toHaveCount(0)
     await balance(page, '-6,00€')
     await page.getByRole('button', { name: 'Buscar copias en la nube' }).click()
     const cloudList = page.getByRole('list', { name: 'Copias guardadas en Dropbox' })
@@ -1323,4 +1324,86 @@ test('la colección One Piece mantiene el paisaje en todas las pantallas y sin c
   await expect(root).toHaveAttribute('data-design', 'one-piece-wano')
   await balance(page, '0,00€')
   expect((await readLandscapeSize()).width).toBeGreaterThanOrEqual(minimumWidth)
+})
+
+test('Dropbox confirma la subida y conserva las cinco copias más recientes', async ({ page }) => {
+  type RemoteFile = { '.tag': 'file', id: string, name: string, server_modified: string, rev: string }
+  const remote = new Map<string, RemoteFile>()
+  function addRemote(id: string, name: string, day: number) {
+    const server_modified = new Date(Date.UTC(2026, 10, day, 12)).toISOString()
+    const file = { '.tag': 'file' as const, id, name, server_modified, rev: 'revision-' + id }
+    remote.set(id, file)
+    return file
+  }
+  for (const day of [23, 21, 24, 20, 22]) {
+    const prefix = day === 20 ? 'mi-dinero-antes-de-restaurar-' : 'mi-dinero-'
+    addRemote('id:backup-' + day, prefix + '2026-11-' + day + 'T12-00-00Z-abcdef12.json', day)
+  }
+  addRemote('id:manual', 'mi-dinero-manual.json', 12)
+  addRemote('id:unrelated', 'otro.json', 10)
+
+  let rejectUpload = true
+  let rejectDeletion = true
+  let uploadedCount = 0
+  let hiddenUpload = ''
+  const deleted: string[] = []
+  await page.evaluate(() => localStorage.setItem('mi-dinero:dropbox', JSON.stringify({
+    appKey: 'mi-dinero-pruebas', refreshToken: 'refresh-token-pruebas',
+  })))
+  await page.route('https://api.dropboxapi.com/oauth2/token', route => route.fulfill({ json: { access_token: 'token' } }))
+  await page.route(/^https:\/\/(?:api|content)\.dropboxapi\.com\/2\/files\//, async route => {
+    const request = route.request()
+    switch (new URL(request.url()).pathname.split('/2/files/')[1]) {
+      case 'upload': {
+        if (rejectUpload) return route.fulfill({ status: 500 })
+        const name = JSON.parse(request.headers()['dropbox-api-arg']).path.slice(1)
+        hiddenUpload = 'id:new-' + ++uploadedCount
+        return route.fulfill({ json: addRemote(hiddenUpload, name, 24 + uploadedCount) })
+      }
+      case 'list_folder':
+      case 'list_folder/continue': {
+        const firstPage = !request.postDataJSON().cursor
+        const entries = Array.from(remote.values()).filter(file => file.id !== hiddenUpload)
+        return route.fulfill({ json: {
+          entries: firstPage ? entries.slice(0, 3) : entries.slice(3),
+          has_more: firstPage, cursor: 'rotation-cursor',
+        } })
+      }
+      case 'delete_v2': {
+        const { path, parent_rev } = request.postDataJSON()
+        expect(parent_rev).toBe(remote.get(path)?.rev)
+        if (rejectDeletion) return route.fulfill({ status: 403 })
+        deleted.push(path)
+        remote.delete(path)
+        return route.fulfill({ json: {} })
+      }
+      default: throw new Error('Operación inesperada en Dropbox')
+    }
+  })
+
+  await backups(page)
+  const upload = page.getByRole('button', { name: 'Subir copia a la nube' })
+  const success = page.getByRole('status').filter({ hasText: 'Copia subida a Dropbox.' })
+  await upload.click()
+  await expect(page.getByRole('alert')).toContainText('Dropbox no ha podido completar la operación')
+  await expect(success).toHaveCount(0)
+  expect(remote.size).toBe(7)
+  expect(deleted).toEqual([])
+
+  rejectUpload = false
+  await upload.click()
+  await expect(success).toBeInViewport()
+  await expect(page.getByText('Quedaron copias antiguas en Dropbox.')).toBeVisible()
+  expect(remote.has('id:new-1')).toBe(true)
+  expect(remote.size).toBe(8)
+
+  rejectDeletion = false
+  await upload.click()
+  await expect(success).toBeInViewport()
+  await expect(upload).toBeEnabled()
+  await expect(page.getByText('Quedaron copias antiguas en Dropbox.')).toHaveCount(0)
+  expect(deleted).toEqual(['id:backup-20', 'id:backup-21'])
+  expect(Array.from(remote.keys()).sort()).toEqual([
+    'id:backup-22', 'id:backup-23', 'id:backup-24', 'id:manual', 'id:new-1', 'id:new-2', 'id:unrelated',
+  ])
 })

@@ -3,6 +3,8 @@ const scopes = 'files.metadata.read files.content.read files.content.write'
 const tokenUrl = 'https://api.dropboxapi.com/oauth2/token'
 const apiUrl = 'https://api.dropboxapi.com/2/files/'
 const contentUrl = 'https://content.dropboxapi.com/2/files/'
+const generatedBackupName = /^mi-dinero-(?:antes-de-restaurar-)?(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:\.\d{3})?)Z-[a-f0-9]{8}(?: \(\d+\))?\.json$/i
+export const dropboxBackupLimit = 5
 
 export type DropboxSettings = {
   appKey: string
@@ -10,7 +12,7 @@ export type DropboxSettings = {
   pending?: { verifier: string, challenge: string, expiresAt: number }
 }
 
-export type CloudBackup = { id: string, name: string, server_modified: string }
+export type CloudBackup = { id: string, name: string, server_modified: string, rev: string }
 
 export function savedDropbox(): DropboxSettings {
   try {
@@ -85,19 +87,26 @@ async function accessToken(settings: DropboxSettings) {
   return token.access_token
 }
 
-async function filesRequest(url: string, token: string, options: RequestInit) {
+async function filesRequest(url: string, token: string, options: RequestInit, allowConflict = false) {
   const headers = new Headers(options.headers)
   headers.set('Authorization', 'Bearer ' + token)
   const response = await request(url, { ...options, headers })
   if (response.status === 401) throw new Error('Dropbox ha rechazado la conexión. Revisa los permisos o vuelve a conectar la cuenta.')
   if (response.status === 403) throw new Error('Dropbox ha denegado el acceso. Revisa los permisos y el espacio disponible en tu cuenta.')
   if (response.status === 429) throw new Error('Dropbox ha limitado las solicitudes. Espera un momento y vuelve a intentarlo.')
+  if (allowConflict && response.status === 409) return response
   if (!response.ok) throw new Error('Dropbox no ha podido completar la operación. Actualiza la lista o vuelve a intentarlo.')
   return response
 }
 
-export async function listDropboxBackups(settings: DropboxSettings): Promise<CloudBackup[]> {
-  const token = await accessToken(settings)
+function newestFirst(a: CloudBackup, b: CloudBackup) {
+  // Dropbox reports modification times to the second. The name breaks ties across devices.
+  return b.server_modified.localeCompare(a.server_modified) ||
+    (generatedBackupName.exec(b.name)?.[1] ?? '').localeCompare(generatedBackupName.exec(a.name)?.[1] ?? '') ||
+    b.id.localeCompare(a.id)
+}
+
+async function listBackups(token: string) {
   const entries = new Map<string, CloudBackup>()
   let cursor: string | undefined
   do {
@@ -111,17 +120,47 @@ export async function listDropboxBackups(settings: DropboxSettings): Promise<Clo
     }
     cursor = page.has_more ? page.cursor : undefined
   } while (cursor)
-  return Array.from(entries.values()).sort((a, b) => b.server_modified.localeCompare(a.server_modified))
+  return entries
+}
+
+export async function listDropboxBackups(settings: DropboxSettings): Promise<CloudBackup[]> {
+  return Array.from((await listBackups(await accessToken(settings))).values()).sort(newestFirst)
+}
+
+async function rotateBackups(token: string, uploaded: CloudBackup) {
+  if (!uploaded.id?.startsWith('id:') || !generatedBackupName.test(uploaded.name) || !uploaded.server_modified) {
+    throw new Error('Dropbox no ha devuelto los datos de la copia subida.')
+  }
+  const copies = await listBackups(token)
+  // A folder listing may not show the new upload yet.
+  if (!copies.has(uploaded.id)) copies.set(uploaded.id, uploaded)
+  const oldest = Array.from(copies.values())
+    .filter(copy => generatedBackupName.test(copy.name)).sort(newestFirst).slice(dropboxBackupLimit).reverse()
+  for (const copy of oldest) {
+    if (!copy.id.startsWith('id:') || !copy.rev) throw new Error('No se ha podido identificar la copia anterior.')
+    const response = await filesRequest(apiUrl + 'delete_v2', token, {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: copy.id, parent_rev: copy.rev }),
+    }, true)
+    if (response.status === 409) {
+      const { error } = await response.json()
+      if (error?.['.tag'] === 'path_lookup' && error.path_lookup?.['.tag'] === 'not_found') continue
+      throw new Error('Dropbox no ha podido borrar una copia anterior.')
+    }
+  }
 }
 
 export async function uploadDropboxBackup(settings: DropboxSettings, file: Blob, beforeRestoring = false) {
-  const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '-')
+  const stamp = new Date().toISOString().replaceAll(':', '-')
   const prefix = beforeRestoring ? 'mi-dinero-antes-de-restaurar-' : 'mi-dinero-'
-  const name = `${prefix}${stamp}Z-${crypto.randomUUID().slice(0, 8)}.json`
-  await filesRequest(contentUrl + 'upload', await accessToken(settings), {
+  const name = `${prefix}${stamp}-${crypto.randomUUID().slice(0, 8)}.json`
+  const token = await accessToken(settings)
+  const response = await filesRequest(contentUrl + 'upload', token, {
     headers: { 'Content-Type': 'application/octet-stream', 'Dropbox-API-Arg': JSON.stringify({ path: '/' + name, mode: 'add', autorename: true }) },
     body: file,
   })
+  const rotation = response.json().then(uploaded => rotateBackups(token, uploaded)).then(() => true, () => false)
+  return { rotation }
 }
 
 export async function downloadDropboxBackup(settings: DropboxSettings, backup: CloudBackup) {

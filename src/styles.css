@@ -332,6 +332,9 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .cloud-backup-list button > span { display: grid; gap: 3px; min-width: 0; }
 .cloud-backup-list small { overflow-wrap: anywhere; color: var(--secondary); font-weight: 400; }
 .export-notice { color: var(--positive); font-size: 13px; margin-top: 12px; }
+.cloud-backup .cloud-upload-success, .confirm-panel .cloud-upload-success { margin: 12px 0 8px; }
+.cloud-upload-success { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--active); color: var(--positive); font-size: 13px; font-weight: 650; }
+.cloud-upload-success svg { flex: 0 0 auto; margin-top: 1px; }
 .more-backup { display: flex; width: 100%; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; font-weight: 580; }
 .more-backup svg:last-child { margin-left: auto; }
 .more-reminders { margin-bottom: 8px; }
