@@ -92,7 +92,7 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 
 ## Diseños de la interfaz
 
-- [x] Colección One Piece con cuatro fondos estáticos de alta resolución, encuadre vertical en móvil y miniaturas en Apariencia.
+- [x] Colección One Piece con cuatro fondos estáticos de alta resolución, encuadres propios para móvil y escritorio y miniaturas en Apariencia.
 
 - El selector de Apariencia ofrece Original, Medianoche, Grafito, Ciruela y Arena, con una vista previa de cada diseño.
 - La elección se guarda en el dispositivo y se aplica desde el arranque. Original conserva el ajuste de color del sistema, claro u oscuro que se usaba antes.

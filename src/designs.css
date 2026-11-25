@@ -343,6 +343,7 @@
   --text: #f5f3e4;
   --accent: #c5dd91;
   --landscape-image: url("./assets/one-piece/elbaph.webp");
+  --landscape-wide-image: url("./assets/one-piece/elbaph-wide.webp");
   --landscape-position: 50% 45%;
 }
 
@@ -352,6 +353,7 @@
   --text: #f3efff;
   --accent: #d2bcff;
   --landscape-image: url("./assets/one-piece/luna.webp");
+  --landscape-wide-image: url("./assets/one-piece/luna-wide.webp");
   --landscape-position: 50% 24%;
 }
 
@@ -361,6 +363,7 @@
   --text: #eef7fb;
   --accent: #ffccaa;
   --landscape-image: url("./assets/one-piece/alba.webp");
+  --landscape-wide-image: url("./assets/one-piece/alba-wide.webp");
   --landscape-position: 58% 45%;
 }
 
@@ -370,6 +373,7 @@
   --text: #fff0f3;
   --accent: #ffbdd3;
   --landscape-image: url("./assets/one-piece/wano.webp");
+  --landscape-wide-image: url("./assets/one-piece/wano-wide.webp");
   --landscape-position: 50% 43%;
 }
 
@@ -438,6 +442,19 @@
   padding: 13px 16px;
 }
 :root[data-design^="one-piece-"] .hero-metric { flex: 1; }
+
+@media (min-width: 761px) {
+  .app-landscape {
+    --landscape-wide-width: min(100%, 177.78svh);
+    --landscape-wide-height: min(100%, 56.25vw);
+    background:
+      linear-gradient(to bottom, color-mix(in srgb, var(--canvas) 30%, transparent), transparent 30%, var(--landscape-shade) 84%, var(--canvas))
+        right top / 100% var(--landscape-wide-height) no-repeat,
+      linear-gradient(to right, var(--canvas), var(--landscape-shade) 12%, transparent 44%)
+        right top / var(--landscape-wide-width) 100% no-repeat,
+      var(--landscape-wide-image) right top / contain no-repeat var(--canvas);
+  }
+}
 
 @media (max-width: 520px) {
   .app-landscape {

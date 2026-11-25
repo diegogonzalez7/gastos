@@ -1269,6 +1269,10 @@ test('la colección One Piece mantiene el paisaje en todas las pantallas y sin c
   const collection = picker.getByRole('region', { name: 'One Piece' })
   const root = page.locator('html')
   const landscape = page.locator('.app-shell > .app-landscape')
+  const viewport = page.viewportSize()!
+  const desktop = viewport.width >= 761
+  const minimumWidth = desktop ? 1500 : 1000
+  const imagePath = (id: string) => new RegExp(id + (desktop ? '-wide' : '') + '-[^/]+\\.webp')
   const readLandscapeSize = () => landscape.evaluate(async element => {
     const url = getComputedStyle(element).backgroundImage.match(/url\("([^"]+)"\)/)?.[1]
     if (!url) throw new Error('No se encontró la ilustración del fondo')
@@ -1289,16 +1293,18 @@ test('la colección One Piece mantiene el paisaje en todas las pantallas y sin c
     await option.click()
     await expect(option).toHaveAttribute('aria-pressed', 'true')
     await expect(root).toHaveAttribute('data-design', 'one-piece-' + id)
-    await expect(landscape).toHaveCSS('background-image', new RegExp(id + '-.*\\.webp'))
+    await expect(landscape).toHaveCSS('background-image', imagePath(id))
     const { width, height } = await readLandscapeSize()
-    expect(width).toBeGreaterThanOrEqual(1000)
-    expect(height / width).toBeCloseTo(1.5, 1)
+    expect(width).toBeGreaterThanOrEqual(minimumWidth)
+    expect(width / height).toBeCloseTo(desktop ? 16 / 9 : 2 / 3, 1)
   }
 
   await picker.getByRole('button', { name: 'Cerrar' }).click()
   await expect(landscape).toHaveCSS('position', 'fixed')
   await expect(landscape).toBeEmpty()
-  if (page.viewportSize()!.width <= 520) {
+  if (desktop) {
+    await expect(landscape).toHaveCSS('background-size', /, contain$/)
+  } else if (viewport.width <= 520) {
     await expect(landscape).toHaveCSS('background-size', /, 100%( auto)?$/)
   }
   await expect(page.getByRole('region', { name: 'Resumen financiero del mes' })).toHaveCSS('background-image', 'none')
@@ -1306,7 +1312,7 @@ test('la colección One Piece mantiene el paisaje en todas las pantallas y sin c
   expect(fullScreen).toMatchObject({ x: 0, y: 0, ...page.viewportSize() })
   for (const tab of ['Movimientos', 'Categorías', 'Resumen']) {
     await navigate(page, tab)
-    await expect(landscape).toHaveCSS('background-image', /wano-.*\.webp/)
+    await expect(landscape).toHaveCSS('background-image', imagePath('wano'))
     expect(await landscape.boundingBox()).toEqual(fullScreen)
   }
   await page.evaluate(() => navigator.serviceWorker.ready)
@@ -1316,5 +1322,5 @@ test('la colección One Piece mantiene el paisaje en todas las pantallas y sin c
   await page.reload()
   await expect(root).toHaveAttribute('data-design', 'one-piece-wano')
   await balance(page, '0,00€')
-  expect((await readLandscapeSize()).width).toBeGreaterThanOrEqual(1000)
+  expect((await readLandscapeSize()).width).toBeGreaterThanOrEqual(minimumWidth)
 })
