@@ -3,9 +3,9 @@ import { downloadFile } from '../files'
 import { appleReminderShortcut, monthlyAlertCalendar, monthlyAlertTitle, nextMonthlyAlert, reminderDate } from '../reminders'
 import { Modal } from './ui'
 
-export function MonthlyAlert({ onClose }: { onClose: () => void }) {
+export function MonthlyAlert({ onClose, onBack }: { onClose: () => void, onBack: () => void }) {
   const first = nextMonthlyAlert()
-  return <Modal title="Aviso del cierre mensual" onClose={onClose}>
+  return <Modal title="Aviso del cierre mensual" onClose={onClose} onBack={onBack}>
     <div className="entry-form">
       <p className="local-note"><Bell size={19} />Configura un aviso el día 1 a las 09:00 para abrir Mi Dinero y ver el mes que acaba de cerrar.</p>
       <section className="reminder-alert monthly-alert-option">

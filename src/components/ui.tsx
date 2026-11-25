@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, type CSSProperties, type KeyboardEventHandler, type ReactNode } from 'react'
 import {
   Coffee, Music, PawPrint, Scissors, Shirt, Utensils, BookOpen, BriefcaseBusiness, Gift, HeartPulse, House, Landmark, Laptop, Layers3,
-  Plane, ReceiptText, ShoppingBag, ShoppingBasket, Ticket, TrainFront, X, type LucideIcon,
+  ChevronLeft, Plane, ReceiptText, ShoppingBag, ShoppingBasket, Ticket, TrainFront, X, type LucideIcon,
 } from 'lucide-react'
 import { categories, money, type CategoryId } from '../ledger'
 
@@ -79,8 +79,9 @@ export function AmountInput({ label, value, onChange, selectOnFocus = false }: {
   </label>
 }
 
-export function Modal({ title, children, onClose, busy = false, className = '', onKeyDown }: {
-  title: string, children: ReactNode, onClose: () => void, busy?: boolean, className?: string, onKeyDown?: KeyboardEventHandler<HTMLDialogElement>,
+export function Modal({ title, children, onClose, onBack, busy = false, className = '', onKeyDown }: {
+  title: string, children: ReactNode, onClose: () => void, onBack?: () => void, busy?: boolean, className?: string,
+  onKeyDown?: KeyboardEventHandler<HTMLDialogElement>,
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -120,6 +121,7 @@ export function Modal({ title, children, onClose, busy = false, className = '', 
     <div className="sheet">
       <div className="sheet-handle" aria-hidden="true" />
       <div className="sheet-heading">
+        {onBack && <button type="button" className="icon-button sheet-back" aria-label="Volver" onClick={onBack} disabled={busy}><ChevronLeft size={21} /></button>}
         <h2 id={titleId}>{title}</h2>
         <button className="icon-button sheet-close" aria-label="Cerrar" onClick={onClose} disabled={busy}><X size={19} /></button>
       </div>

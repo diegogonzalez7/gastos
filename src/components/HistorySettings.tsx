@@ -8,8 +8,8 @@ const months = Array.from({ length: 12 }, (_, index) => {
   return { value, label: capitalize(dateLabel(`2026-${value}-01`, { month: 'long' })) }
 })
 
-export function HistorySettings({ start, onClose, onSaved }: {
-  start: string, onClose: () => void, onSaved: (month: string) => void,
+export function HistorySettings({ start, onClose, onBack, onSaved }: {
+  start: string, onClose: () => void, onBack: () => void, onSaved: (month: string) => void,
 }) {
   const current = calendarDay().slice(0, 7)
   const currentYear = Number(current.slice(0, 4))
@@ -30,7 +30,7 @@ export function HistorySettings({ start, onClose, onSaved }: {
     catch (err) { setError(storageMessage(err)); setBusy(false) }
   }
 
-  return <Modal title="Ajustes" onClose={onClose} busy={busy}>
+  return <Modal title="General" onClose={onClose} onBack={onBack} busy={busy}>
     <form className="entry-form" onSubmit={save}>
       <div>
         <h3>Mes de inicio</h3>
@@ -46,5 +46,8 @@ export function HistorySettings({ start, onClose, onSaved }: {
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="primary wide" type="submit" disabled={busy || start === next}>{busy ? 'Guardando…' : 'Guardar mes de inicio'}</button>
     </form>
+    <details className="iphone-install"><summary>Instalar en la pantalla de inicio del iPhone</summary>
+      <p>Abre Mi Dinero en Safari mediante HTTPS. Pulsa Compartir, elige Añadir a la pantalla de inicio y confirma con Añadir. Si aparece Abrir como app web, déjalo activado.</p>
+    </details>
   </Modal>
 }

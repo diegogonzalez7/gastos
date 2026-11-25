@@ -142,3 +142,7 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 
 - Ajustes permite elegir el primer mes del calendario, los movimientos y los cierres. La preferencia se guarda en el dispositivo. Las instalaciones anteriores parten de septiembre de 2026 y las nuevas de enero del año actual.
 - La prueba de navegador verifica que un inicio en abril de 2020 se recuerda y que los movimientos ocultos reaparecen al ampliar el periodo. Las copias y el saldo conservan los movimientos previos.
+
+## Organización de ajustes
+
+- La barra lateral y el menú Más dan acceso a Recordatorios y Ajustes. Ajustes agrupa General, Apariencia, Notificaciones y Copias de seguridad. Cada sección permite volver al menú.

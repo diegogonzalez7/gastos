@@ -23,19 +23,19 @@ Abre la dirección que muestra Vite en la terminal. Para probar la interfaz desd
 - **Reembolsos y gastos compartidos.** Registra el gasto por su importe completo, ábrelo y pulsa **Registrar reembolso**. Introduce lo cobrado, su fecha y si lo recibiste en efectivo o en cuenta bancaria. Puedes registrar varios reembolsos parciales desde **Ver reembolsos**. El gasto neto se atribuye al mes y la categoría de la compra. El saldo bancario incorpora los reembolsos por cuenta en la fecha de cobro y el historial muestra ambos movimientos por separado.
 - **Cajero.** Pulsa **Nuevo → Retirada** para registrar dinero que sacaste de tu cuenta. La retirada reduce el saldo bancario. Registra después cada compra como gasto en efectivo para que cuente en el gasto mensual.
 - **Consultar.** El balance del mes muestra todos los ingresos menos los gastos netos, incluido el efectivo. El **saldo bancario al cierre** combina el saldo inicial, los ingresos y gastos bancarios, las retiradas y los reembolsos recibidos en cuenta hasta el mes elegido. El **saldo bancario total** considera todos los meses guardados.
-- **Mes de inicio.** En **Más → Ajustes** en el móvil o **Ajustes** en la barra lateral del ordenador, elige desde qué mes se muestran el calendario y el historial. Cada dispositivo guarda su elección. Una instalación nueva empieza en enero del año actual. Las instalaciones que ya usaban la app mantienen septiembre de 2026 como punto de partida. Los movimientos anteriores al mes seleccionado se conservan en las copias y siguen contando para el saldo.
+- **Mes de inicio.** En **Ajustes → General**, elige desde qué mes se muestran el calendario y el historial. Cada dispositivo guarda su elección. Una instalación nueva empieza en enero del año actual. Las instalaciones que ya usaban la app mantienen septiembre de 2026 como punto de partida. Los movimientos anteriores al mes seleccionado se conservan en las copias y siguen contando para el saldo.
 - **Buscar y corregir.** En **Movimientos** puedes buscar por concepto o categoría y filtrar ingresos o gastos. El selector de periodo incluye **Todos los meses**. Toca una fila para editarla o eliminarla con confirmación.
 - **Repetir un movimiento.** Abre un movimiento guardado y pulsa **Duplicar movimiento**. La copia empieza con la fecha de hoy y puedes ajustar sus datos antes de guardarla.
 - **Favoritos con importe.** En **Resumen → Registro rápido → Añadir favorito**, guarda un gasto o ingreso con su importe, categoría y concepto. Al tocar el favorito se abre un movimiento editable con la fecha de hoy. Usa **Gestionar favoritos** para añadir, editar o borrar accesos. Cada dispositivo guarda sus propios favoritos.
 - **Presentación del historial.** Los gastos registrados desde favoritos y los de Máquina Trabajo muestran la categoría como título. El concepto se conserva en el formulario y en la búsqueda.
 - **Entender los gastos.** **Categorías** ordena los gastos del mes por importe y muestra su porcentaje. Toca una categoría del desglose para consultar los movimientos que la componen.
-- **Apariencia.** La opción inicial sigue el tema del sistema. Puedes elegir claro u oscuro desde la barra lateral o desde **Más** en el móvil.
+- **Apariencia.** En **Ajustes → Apariencia** puedes elegir claro, oscuro o seguir el tema del sistema.
 
-En **Más → Apariencia → Diseños** puedes usar **Original**, **Medianoche**, **Grafito**, **Ciruela** o **Arena**. En ordenador, el acceso está en **Apariencia**, en la barra lateral. Medianoche, Grafito y Ciruela tienen fondo oscuro. Arena usa tonos crema. La elección se guarda en cada dispositivo y al volver a Original se recupera el modo de color que tenías seleccionado allí.
+En el móvil, abre **Ajustes** desde **Más**. En el ordenador, está en la barra lateral. Dentro de **Apariencia → Diseños** puedes usar **Original**, **Medianoche**, **Grafito**, **Ciruela** o **Arena**. Medianoche, Grafito y Ciruela tienen fondo oscuro. Arena usa tonos crema. La elección se guarda en cada dispositivo y al volver a Original se recupera el modo de color que tenías seleccionado allí.
 
 ## Copias de seguridad
 
-Abre **Copias de seguridad** desde la barra lateral o el menú **Más**. **Descargar copia** guarda el saldo inicial y todos los meses en un archivo `mi-dinero-AAAA-MM-DD.json`. El archivo contiene los conceptos e importes en texto legible. Guárdalo en un lugar privado.
+Abre **Ajustes → Copias de seguridad**. **Descargar copia** guarda el saldo inicial y todos los meses en un archivo `mi-dinero-AAAA-MM-DD.json`. El archivo contiene los conceptos e importes en texto legible. Guárdalo en un lugar privado.
 
 Las copias nuevas conservan las formas de pago, las retiradas y los reembolsos de cada gasto. Puedes restaurar las copias anteriores. Los gastos antiguos de Máquina Trabajo se interpretan como efectivo también al restaurarlos.
 
@@ -82,7 +82,7 @@ Cada historia avanza automáticamente a los **30 segundos**. Toca a la izquierda
 
 El cierre muestra el balance, la categoría con más gasto, el gasto más alto y el saldo bancario. La comparación indica el dinero y el porcentaje gastado de más o de menos respecto al mes anterior. Si ese mes tuvo 0 € de gasto, muestra la diferencia en euros. Los importes se calculan con los datos de ese dispositivo.
 
-En el iPhone, abre **Más → Aviso del cierre mensual → Abrir atajo**. Usa el atajo **Pago de Mi Dinero** para crear el primer aviso. Luego abre ese aviso en **Recordatorios** y selecciona **Repetir → Cada mes**. Si prefieres el calendario, en el mismo panel puedes descargar e importar una cita recurrente con alerta. Ambas opciones proponen el día 1 a las 09:00, hora local.
+En el iPhone, abre **Más → Ajustes → Notificaciones → Abrir atajo**. Usa el atajo **Pago de Mi Dinero** para crear el primer aviso. Luego abre ese aviso en **Recordatorios** y selecciona **Repetir → Cada mes**. Si prefieres el calendario, en el mismo panel puedes descargar e importar una cita recurrente con alerta. Ambas opciones proponen el día 1 a las 09:00, hora local.
 
 ## Probar la versión instalable
 

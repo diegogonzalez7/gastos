@@ -20,9 +20,8 @@ async function add(page: Page, concept: string, amount: string, date: string, ca
 }
 
 async function backups(page: Page) {
-  const more = page.getByRole('button', { name: 'Más', exact: true })
-  if (await more.isVisible()) await more.click()
-  await page.getByRole('button', { name: 'Copias de seguridad', exact: true }).click()
+  const settings = await openSettings(page)
+  await settings.getByRole('button', { name: 'Copias de seguridad', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Copias de seguridad' })).toBeVisible()
 }
 
@@ -35,8 +34,20 @@ async function openSettings(page: Page) {
   return dialog
 }
 
+async function openGeneral(page: Page) {
+  const settings = await openSettings(page)
+  await settings.getByRole('button', { name: 'General', exact: true }).click()
+  return page.getByRole('dialog', { name: 'General' })
+}
+
+async function openAppearance(page: Page) {
+  const settings = await openSettings(page)
+  await settings.getByRole('button', { name: 'Apariencia', exact: true }).click()
+  return page.getByRole('dialog', { name: 'Apariencia' })
+}
+
 async function setHistoryStart(page: Page, year: string, month: string) {
-  const dialog = await openSettings(page)
+  const dialog = await openGeneral(page)
   await dialog.getByLabel('Año', { exact: true }).fill(year)
   await dialog.getByLabel('Mes', { exact: true }).selectOption(month)
   await dialog.getByRole('button', { name: 'Guardar mes de inicio' }).click()
@@ -54,8 +65,34 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Nuevo movimiento' })).toBeEnabled()
 })
 
+test('Ajustes agrupa las opciones y permite volver desde sus secciones', async ({ page }) => {
+  const more = page.getByRole('button', { name: 'Más', exact: true })
+  let menu = page.locator('.sidebar-bottom')
+  if (await more.isVisible()) {
+    await more.click()
+    menu = page.getByRole('dialog', { name: 'Más opciones' })
+  }
+  await expect(menu.getByRole('button', { name: 'Recordatorios', exact: true })).toBeVisible()
+  await expect(menu.getByRole('button', { name: 'Copias de seguridad', exact: true })).toHaveCount(0)
+  await expect(menu.getByRole('button', { name: 'Aviso mensual', exact: true })).toHaveCount(0)
+  await menu.getByRole('button', { name: 'Ajustes', exact: true }).click()
+  const settings = page.getByRole('dialog', { name: 'Ajustes' })
+  for (const [section, name] of [
+    ['General', 'General'], ['Apariencia', 'Apariencia'],
+    ['Notificaciones', 'Aviso del cierre mensual'], ['Copias de seguridad', 'Copias de seguridad'],
+  ]) {
+    await settings.getByRole('button', { name: section, exact: true }).click()
+    const dialog = page.getByRole('dialog', { name, exact: true })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Volver', exact: true }).click()
+    await expect(settings).toBeVisible()
+  }
+  await settings.getByRole('button', { name: 'Cerrar', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
 test('el mes de inicio se puede ampliar, se recuerda y controla los periodos visibles', async ({ page }) => {
-  const settings = await openSettings(page)
+  const settings = await openGeneral(page)
   await expect(settings.getByLabel('Mes', { exact: true })).toHaveValue('01')
   await settings.getByRole('button', { name: 'Cerrar' }).click()
   await setHistoryStart(page, '2020', '04')
@@ -171,9 +208,8 @@ test('nuevo movimiento, validación, tema y tamaño de pantalla', async ({ page 
   await dialog.getByLabel('Importe', { exact: true }).fill('1,25')
   await dialog.getByRole('button', { name: 'Guardar movimiento' }).click()
   await balance(page, '-1,25€')
-  const more = page.getByRole('button', { name: 'Más', exact: true })
-  if (await more.isVisible()) await more.click()
-  await page.getByRole('button', { name: 'Tema oscuro' }).click()
+  const appearance = await openAppearance(page)
+  await appearance.getByRole('button', { name: 'Tema oscuro' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -700,7 +736,7 @@ test('actualizar la app conserva la base de datos anterior', async ({ browser, p
     const strip = tab.getByRole('region', { name: 'Saldos de la cuenta' })
     await expect(strip.locator('strong').last()).toContainText('-14,00')
     await expect(strip.locator('strong').first()).toContainText('0,00')
-    const settings = await openSettings(tab)
+    const settings = await openGeneral(tab)
     await expect(settings.getByLabel('Año', { exact: true })).toHaveValue('2026')
     await expect(settings.getByLabel('Mes', { exact: true })).toHaveValue('09')
     await settings.getByRole('button', { name: 'Cerrar' }).click()
@@ -1055,11 +1091,8 @@ test('el cierre aparece al cambiar de mes y se puede volver a ver o abrir su his
 
 test('el aviso mensual genera una cita recurrente y enlaza al atajo existente', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
-  const more = page.getByRole('button', { name: 'Más', exact: true })
-  if (await more.isVisible()) {
-    await more.click()
-    await page.getByRole('button', { name: 'Aviso del cierre mensual' }).click()
-  } else await page.getByRole('button', { name: 'Aviso mensual', exact: true }).click()
+  const settings = await openSettings(page)
+  await settings.getByRole('button', { name: 'Notificaciones', exact: true }).click()
   const notice = page.getByRole('dialog', { name: 'Aviso del cierre mensual' })
   const shortcut = new URL((await notice.getByRole('link', { name: 'Abrir atajo' }).getAttribute('href'))!)
   expect(shortcut.searchParams.get('name')).toBe('Pago de Mi Dinero')
@@ -1076,22 +1109,18 @@ test('el aviso mensual genera una cita recurrente y enlaza al atajo existente', 
 test('los diseños se pueden previsualizar, se recuerdan y conservan el modo del original', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-24T12:00:00+01:00'))
   const root = page.locator('html')
-  const more = page.getByRole('button', { name: 'Más', exact: true })
-  const openAppearance = async () => {
-    if (await more.isVisible()) await more.click()
-  }
   const openDesigns = async () => {
-    await openAppearance()
-    await page.getByRole('button', { name: 'Elegir diseño' }).click()
+    const appearance = await openAppearance(page)
+    await appearance.getByRole('button', { name: 'Elegir diseño' }).click()
   }
   const picker = page.getByRole('dialog', { name: 'Diseños de Mi Dinero' })
   const balanceCard = page.getByRole('region', { name: 'Resumen financiero del mes' })
 
   await expect(root).not.toHaveAttribute('data-design', /.+/)
   await add(page, 'Café del día', '0,90', '2026-11-24', 'machine')
-  await openAppearance()
-  await page.getByRole('button', { name: 'Tema oscuro' }).click()
-  await page.getByRole('button', { name: 'Elegir diseño' }).click()
+  const appearance = await openAppearance(page)
+  await appearance.getByRole('button', { name: 'Tema oscuro' }).click()
+  await appearance.getByRole('button', { name: 'Elegir diseño' }).click()
   await expect(picker.getByRole('button', { name: 'Original' })).toHaveAttribute('aria-pressed', 'true')
 
   for (const [name, id, mode, color, radius] of [

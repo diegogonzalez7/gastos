@@ -37,8 +37,8 @@ function monthRange(entries: Ledger['entries']) {
   return firstMonth === lastMonth ? monthLabel(firstMonth) : monthLabel(firstMonth) + ' a ' + monthLabel(lastMonth)
 }
 
-export function Backups({ ledger, onClose, onRestored }: {
-  ledger: Ledger | null, onClose: () => void, onRestored: () => void,
+export function Backups({ ledger, onClose, onBack, onRestored }: {
+  ledger: Ledger | null, onClose: () => void, onBack: () => void, onRestored: () => void,
 }) {
   const [busy, setBusy] = useState(false)
   const [cloudBusy, setCloudBusy] = useState(false)
@@ -139,7 +139,9 @@ export function Backups({ ledger, onClose, onRestored }: {
 
   const refundsCount = preview?.ledger.entries.reduce((total, entry) => total + (entry.refunds?.length ?? 0), 0) ?? 0
 
-  return <Modal title={preview ? 'Confirmar restauración' : 'Copias de seguridad'} onClose={onClose} busy={busy}>
+  function dismissPreview() { setPreview(null); setError(''); setNotice('') }
+
+  return <Modal title={preview ? 'Confirmar restauración' : 'Copias de seguridad'} onClose={onClose} onBack={preview ? dismissPreview : onBack} busy={busy}>
     {preview && <div className="confirm-panel">
       <div className="file-preview"><FileCheck2 size={23} /><strong>{preview.file}</strong></div>
       <p>La copia contiene <strong>{preview.ledger.entries.length} {preview.ledger.entries.length === 1 ? 'movimiento' : 'movimientos'}</strong>.
@@ -165,7 +167,7 @@ export function Backups({ ledger, onClose, onRestored }: {
           </button>
         </div>}
       <div className="action-row">
-        <button className="secondary" disabled={busy} onClick={() => { setPreview(null); setError(''); setNotice('') }}>Cancelar</button>
+        <button className="secondary" disabled={busy} onClick={dismissPreview}>Cancelar</button>
         <button className="primary" disabled={busy} onClick={restore}>{busy && !cloudBusy ? 'Restaurando…' : 'Restaurar copia'}</button>
       </div>
     </div>}

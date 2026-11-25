@@ -22,10 +22,10 @@ export function savedDesign(): Design {
   return designs.find(design => design.id === id)?.id ?? 'original'
 }
 
-export function DesignPicker({ selected, originalTheme, onChange, onClose }: {
-  selected: Design, originalTheme: Theme, onChange: (id: Design) => void, onClose: () => void,
+export function DesignPicker({ selected, originalTheme, onChange, onClose, onBack }: {
+  selected: Design, originalTheme: Theme, onChange: (id: Design) => void, onClose: () => void, onBack: () => void,
 }) {
-  return <Modal title="Diseños de Mi Dinero" onClose={onClose} className="design-dialog">
+  return <Modal title="Diseños de Mi Dinero" onClose={onClose} onBack={onBack} className="design-dialog">
     <div className="design-grid" role="group" aria-label="Diseños">
       {designs.map(({ id, label, description }) => <button key={id} className="design-option" aria-label={label}
         aria-pressed={selected === id} onClick={() => onChange(id)}>

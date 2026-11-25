@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Archive, Bell, CalendarClock, Check, ChevronRight, CircleAlert, Database, Ellipsis, LayoutDashboard,
-  List, MonitorSmartphone, Moon, Palette, PieChart, Plus, Settings, Sun, X, type LucideIcon,
+  List, MonitorSmartphone, Moon, Palette, PieChart, Plus, Settings, SlidersHorizontal, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
   accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
@@ -31,6 +31,12 @@ const pages = {
 type Page = keyof typeof pages
 const pageIds = Object.keys(pages) as Page[]
 const seenReportKey = 'mi-dinero:seen-monthly-story'
+const settingsSections = [
+  { id: 'general', label: 'General', detail: 'Mes de inicio', icon: SlidersHorizontal },
+  { id: 'appearance', label: 'Apariencia', detail: 'Tema y diseño', icon: Palette },
+  { id: 'monthly-alert', label: 'Notificaciones', detail: 'Aviso del cierre mensual', icon: CalendarClock },
+  { id: 'backup', label: 'Copias de seguridad', detail: 'Dropbox, exportar y restaurar', icon: Archive },
+] as const
 
 function savedSeenReport() {
   try { return localStorage.getItem(seenReportKey) } catch { return null }
@@ -78,7 +84,7 @@ export default function App() {
   const [editor, setEditor] = useState<EditorDraft | null>(null)
   const [refundDialog, setRefundDialog] = useState<{ entry: Entry, selected?: Refund } | null>(null)
   const [favorites, setFavorites] = useState(readFavorites)
-  const [utility, setUtility] = useState<'more' | 'backup' | 'reminders' | 'monthly-alert' | 'designs' | 'favorites' | 'settings' | null>(null)
+  const [utility, setUtility] = useState<(typeof settingsSections)[number]['id'] | 'more' | 'reminders' | 'designs' | 'favorites' | 'settings' | null>(null)
   const [storyMonth, setStoryMonth] = useState<string | null>(null)
   const [seenReport, setSeenReport] = useState(savedSeenReport)
   const [toast, setToast] = useState<{ label: string } | null>(null)
@@ -235,12 +241,8 @@ export default function App() {
       onClick={() => { setUtility(null); if (key === 'movimientos') setCategory(null) }}>
       <Icon size={mobile ? 21 : 19} strokeWidth={1.8} /><span>{pages[key].label}</span></a>
   })
-  const appearance = <>
-    {design === 'original' && <ThemeControl theme={theme} onChange={changeTheme} />}
-    <button className="design-launch" aria-label="Elegir diseño" aria-haspopup="dialog" onClick={() => setUtility('designs')}>
-      <Palette size={16} /><span>Diseños</span><strong>{designLabel(design)}</strong>
-    </button>
-  </>
+  const closeUtility = () => setUtility(null)
+  const backToSettings = () => setUtility('settings')
   const addButton = (mobile: boolean) => <button className={'primary new-button ' + (mobile ? 'mobile-new' : 'desktop-new')}
     aria-label="Nuevo movimiento" onClick={() => add()} disabled={loadState !== 'ready'}>
     <Plus size={19} />{mobile ? <span>Nuevo</span> : <><span className="new-label-full">Nuevo movimiento</span><span className="new-label-compact">Nuevo</span></>}
@@ -253,10 +255,7 @@ export default function App() {
       <nav className="side-navigation" aria-label="Navegación principal">{navLinks(false)}</nav>
       <div className="sidebar-bottom">
         <button className="nav-item backup-nav" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={19} />Recordatorios</button>
-        <button className="nav-item backup-nav" onClick={() => setUtility('monthly-alert')}><CalendarClock size={19} />Aviso mensual</button>
-        <button className="nav-item backup-nav" onClick={() => setUtility('backup')}><Archive size={19} />Copias de seguridad</button>
-        <button className="nav-item backup-nav" disabled={loadState !== 'ready'} onClick={() => setUtility('settings')}><Settings size={19} />Ajustes</button>
-        <div className="side-settings"><span className="settings-label">Apariencia</span>{appearance}</div>
+        <button className="nav-item backup-nav" onClick={backToSettings}><Settings size={19} />Ajustes</button>
         <div className="local-status"><span />Datos en este dispositivo</div>
       </div>
     </aside>
@@ -299,28 +298,40 @@ export default function App() {
     {report && <MonthlyStory key={report.month} report={report} onClose={() => setStoryMonth(null)}
       onHistory={() => { setStoryMonth(null); setMonth(report.month); showHistory() }}
       onHome={() => { setStoryMonth(null); setMonth(currentMonth); goTo('resumen') }} />}
-    {utility === 'more' && <Modal title="Más opciones" onClose={() => setUtility(null)}>
+    {utility === 'more' && <Modal title="Más opciones" onClose={closeUtility}>
       <button className="more-backup more-reminders" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={20} />Recordatorios<ChevronRight size={17} /></button>
-      <button className="more-backup more-reminders" onClick={() => setUtility('monthly-alert')}><CalendarClock size={20} />Aviso del cierre mensual<ChevronRight size={17} /></button>
-      <button className="more-backup more-reminders" onClick={() => setUtility('backup')}><Archive size={20} />Copias de seguridad<ChevronRight size={17} /></button>
-      <button className="more-backup" disabled={loadState !== 'ready'} onClick={() => setUtility('settings')}><Settings size={20} />Ajustes<ChevronRight size={17} /></button>
-      <details className="iphone-install"><summary>Instalar en la pantalla de inicio del iPhone</summary>
-        <p>Abre Mi Dinero en Safari mediante HTTPS. Pulsa Compartir, elige Añadir a la pantalla de inicio y confirma con Añadir. Si aparece Abrir como app web, déjalo activado.</p>
-      </details>
-      <div className="more-theme"><h3>Apariencia</h3>{appearance}</div>
-      <p className="local-note"><Database size={17} />Tus datos se guardan en este dispositivo.</p>
+      <button className="more-backup" onClick={backToSettings}><Settings size={20} />Ajustes<ChevronRight size={17} /></button>
     </Modal>}
     {utility === 'reminders' && <Reminders reminders={reminders} onClose={() => setUtility(null)} onChange={reload} />}
-    {utility === 'monthly-alert' && <MonthlyAlert onClose={() => setUtility(null)} />}
-    {utility === 'designs' && <DesignPicker selected={design} originalTheme={theme} onChange={changeDesign} onClose={() => setUtility(null)} />}
-    {utility === 'settings' && <HistorySettings start={firstHistoryMonth} onClose={() => setUtility(null)} onSaved={next => {
+    {utility === 'settings' && <Modal title="Ajustes" onClose={closeUtility}>
+      <div className="settings-navigation">
+        {settingsSections.map(({ id, label, detail, icon: Icon }) => <button key={id} type="button" aria-label={label}
+          aria-describedby={`settings-${id}`} aria-haspopup="dialog" disabled={id === 'general' && loadState !== 'ready'}
+          onClick={() => setUtility(id)}>
+          <span className="utility-icon"><Icon size={19} /></span>
+          <span><strong>{label}</strong><small id={`settings-${id}`}>{detail}</small></span>
+          <ChevronRight size={16} />
+        </button>)}
+      </div>
+      <p className="local-note settings-local-note"><Database size={17} />Tus datos se guardan en este dispositivo.</p>
+    </Modal>}
+    {utility === 'appearance' && <Modal title="Apariencia" onClose={closeUtility} onBack={backToSettings}>
+      {design === 'original' && <ThemeControl theme={theme} onChange={changeTheme} />}
+      <button className="design-launch" aria-label="Elegir diseño" aria-haspopup="dialog" onClick={() => setUtility('designs')}>
+        <Palette size={16} /><span>Diseños</span><strong>{designLabel(design)}</strong>
+      </button>
+    </Modal>}
+    {utility === 'monthly-alert' && <MonthlyAlert onClose={closeUtility} onBack={backToSettings} />}
+    {utility === 'designs' && <DesignPicker selected={design} originalTheme={theme} onChange={changeDesign}
+      onClose={closeUtility} onBack={() => setUtility('appearance')} />}
+    {utility === 'general' && <HistorySettings start={firstHistoryMonth} onClose={closeUtility} onBack={backToSettings} onSaved={next => {
       setFirstHistoryMonth(next)
       setMonth(selected => selected < next ? next : selected)
       setUtility(null)
       void reload()
       notify('Mes de inicio guardado')
     }} />}
-    {utility === 'backup' && <Backups ledger={loadState === 'ready' ? { entries, openingCents, reminders } : null} onClose={() => setUtility(null)}
+    {utility === 'backup' && <Backups ledger={loadState === 'ready' ? { entries, openingCents, reminders } : null} onClose={closeUtility} onBack={backToSettings}
       onRestored={() => { setUtility(null); void reload(); notify('Copia restaurada') }} />}
     {toast && <div className="toast" role="status"><Check size={17} />{toast.label}<button aria-label="Ocultar aviso" onClick={() => setToast(null)}><X size={14} /></button></div>}
   </div>
