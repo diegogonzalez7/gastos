@@ -152,7 +152,8 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - Movimientos permite filtrar por efectivo o cuenta bancaria y muestra los importes y el neto de las filas visibles. Cada reembolso se filtra por su propia forma de cobro y las retiradas aparecen con los movimientos bancarios.
 - Los totales visibles se distribuyen a lo ancho. Con tres importes se alinean a la izquierda, al centro y a la derecha. Con dos importes ocupan los extremos.
 
-## Pendientes
+## Retiradas, deshacer y copias con preferencias
 
-- [ ] Ofrecer Deshacer tras borrar un movimiento y recuperar también los reembolsos vinculados.
-- [ ] Incluir favoritos y ajustes de forma opcional en las copias de seguridad, con opción de restaurarlos junto al historial.
+- [x] Las retiradas muestran Cuenta bancaria → Efectivo y se localizan con el filtro bancario.
+- [x] Deshacer recupera un movimiento borrado y sus reembolsos vinculados, o un reembolso borrado de forma individual.
+- [x] Las copias locales y de Dropbox pueden incluir favoritos, tema, diseño y mes de inicio. La restauración permite elegir qué opciones recuperar junto al historial.

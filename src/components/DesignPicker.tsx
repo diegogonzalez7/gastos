@@ -1,26 +1,6 @@
 import { Check } from 'lucide-react'
+import { designs, type Design, type Theme } from '../appearance'
 import { Modal } from './ui'
-
-const designs = [
-  { id: 'original', label: 'Original', description: 'La apariencia de siempre' },
-  { id: 'midnight', label: 'Medianoche', description: 'Azul tinta y líneas técnicas' },
-  { id: 'graphite', label: 'Grafito', description: 'Carbón y acentos ámbar' },
-  { id: 'plum', label: 'Ciruela', description: 'Violeta oscuro y formas suaves' },
-  { id: 'sand', label: 'Arena', description: 'Crema cálida y terracota' },
-] as const
-
-export type Design = typeof designs[number]['id']
-export type Theme = 'system' | 'light' | 'dark'
-export const designKey = 'mi-dinero:design'
-
-export function designLabel(id: Design) {
-  return designs.find(design => design.id === id)!.label
-}
-
-export function savedDesign(): Design {
-  const id = document.documentElement.dataset.design
-  return designs.find(design => design.id === id)?.id ?? 'original'
-}
 
 export function DesignPicker({ selected, originalTheme, onChange, onClose, onBack }: {
   selected: Design, originalTheme: Theme, onChange: (id: Design) => void, onClose: () => void, onBack: () => void,

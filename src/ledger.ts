@@ -1,4 +1,5 @@
 import { readReminders, type Reminder } from './reminders.ts'
+import { validDesign, validTheme, type Design, type Theme } from './appearance.ts'
 
 export type Kind = 'expense' | 'income' | 'withdrawal'
 export type PaymentSource = 'cash' | 'bank'
@@ -115,6 +116,10 @@ export interface Ledger {
   reminders?: Reminder[]
 }
 
+export type Favorite = Pick<Entry, 'id' | 'category' | 'concept' | 'cents' | 'payment'>
+export type BackupSettings = { historyStart: string, theme: Theme, design: Design }
+export interface BackupExtras { favorites?: Favorite[], settings?: BackupSettings }
+
 export function accountBalances({ entries, openingCents }: Ledger, month: string) {
   let closing = openingCents
   let total = openingCents
@@ -205,6 +210,13 @@ function record(value: unknown): value is Record<string, unknown> {
 
 const validId = (value: unknown): value is string => typeof value === 'string' && /^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value)
 
+export function validFavorite(value: unknown): value is Favorite {
+  return record(value) && validId(value.id) && typeof value.category === 'string' && Object.hasOwn(categories, value.category) &&
+    typeof value.concept === 'string' && value.concept.length <= MAX_CONCEPT &&
+    (value.payment === undefined || value.payment === 'cash' || value.payment === 'bank') &&
+    typeof value.cents === 'number' && Number.isSafeInteger(value.cents) && value.cents > 0 && value.cents <= MAX_CENTS
+}
+
 function readRefunds(value: unknown, expense: Entry): Refund[] {
   if (!Array.isArray(value)) throw new Error('La copia contiene reembolsos no válidos.')
   const ids = new Set<string>()
@@ -243,7 +255,7 @@ function readEntry(value: unknown, version: number): Entry {
   return entry
 }
 
-export function makeBackup({ entries, openingCents, reminders }: Ledger) {
+export function makeBackup({ entries, openingCents, reminders }: Ledger, { favorites, settings }: BackupExtras = {}) {
   const transactions = entries.map<Entry>(({ payment, ...entry }) => {
     const source = paymentSource({ category: entry.category, payment })
     if (entry.kind === 'expense') return { ...entry, payment: source, refunds: entry.refunds?.length ? entry.refunds : undefined }
@@ -251,10 +263,10 @@ export function makeBackup({ entries, openingCents, reminders }: Ledger) {
   })
   const version = transactions.some(entry => entry.kind === 'income' && entry.payment === 'cash') ? 5
     : transactions.some(entry => entry.refunds?.length) ? 4 : 3
-  return { app: 'mi-dinero', version, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions, reminders }
+  return { app: 'mi-dinero', version, currency: 'EUR', openingCents, exportedAt: new Date().toISOString(), transactions, reminders, favorites, settings }
 }
 
-export function readBackup(text: string): Ledger {
+export function readBackup(text: string): Ledger & BackupExtras {
   let data: unknown
   try { data = JSON.parse(text) } catch { throw new Error('El archivo no contiene JSON válido.') }
   if (!record(data) || data.app !== 'mi-dinero') throw new Error('Selecciona una copia creada con Mi Dinero.')
@@ -267,8 +279,25 @@ export function readBackup(text: string): Ledger {
   if (typeof openingCents !== 'number' || !Number.isSafeInteger(openingCents) || Math.abs(openingCents) > MAX_CENTS) {
     throw new Error('La copia contiene un saldo inicial no válido.')
   }
-  if (data.reminders === undefined) return { entries, openingCents }
-  return { entries, openingCents, reminders: readReminders(data.reminders) }
+  const backup: Ledger & BackupExtras = { entries, openingCents }
+  if (data.reminders !== undefined) backup.reminders = readReminders(data.reminders)
+  if (data.favorites !== undefined) {
+    if (!Array.isArray(data.favorites) || !data.favorites.every(validFavorite) ||
+      new Set(data.favorites.map(favorite => favorite.id.toLowerCase())).size !== data.favorites.length) {
+      throw new Error('La copia contiene favoritos con datos no válidos o duplicados.')
+    }
+    backup.favorites = data.favorites.map(({ id, category, concept, cents, payment }) => ({
+      id: id.toLowerCase(), category, concept: concept.trim(), cents, ...(payment === undefined ? {} : { payment }),
+    }))
+  }
+  if (data.settings !== undefined) {
+    const settings = data.settings
+    if (!record(settings) || !validMonth(settings.historyStart) || !validTheme(settings.theme) || !validDesign(settings.design)) {
+      throw new Error('La copia contiene ajustes no válidos.')
+    }
+    backup.settings = { historyStart: settings.historyStart, theme: settings.theme, design: settings.design }
+  }
+  return backup
 }
 
 export function equalEntry(a: Entry | undefined, b: Entry) {

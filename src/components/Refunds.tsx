@@ -6,7 +6,7 @@ import { AmountInput, Modal } from './ui'
 
 export function Refunds({ entry, selected, firstHistoryDay, onClose, onSaved }: {
   firstHistoryDay: string,
-  entry: Entry, selected?: Refund, onClose: () => void, onSaved: (message: string) => void,
+  entry: Entry, selected?: Refund, onClose: () => void, onSaved: (message: string, undo?: () => Promise<void>) => void,
 }) {
   const refunds = entry.refunds ?? []
   const [editing, setEditing] = useState(!!selected || !refunds.length)
@@ -47,11 +47,15 @@ export function Refunds({ entry, selected, firstHistoryDay, onClose, onSaved }: 
     else back()
   }
 
-  async function update(next: Refund[], message: string) {
+  async function update(next: Refund[], message: string, deleting = false) {
     if (busy) return
     setBusy(true)
     setError('')
-    try { await changeEntry(entry, { ...entry, refunds: next }); onSaved(message) }
+    try {
+      const updated = { ...entry, refunds: next }
+      await changeEntry(entry, updated)
+      onSaved(message, deleting ? () => changeEntry(updated, entry) : undefined)
+    }
     catch (err) { setError(storageMessage(err)); setBusy(false) }
   }
 
@@ -75,7 +79,7 @@ export function Refunds({ entry, selected, firstHistoryDay, onClose, onSaved }: 
       <div className="action-row">
         <button className="secondary" disabled={busy} onClick={() => { setConfirm(null); setError('') }}>{confirm === 'delete' ? 'Cancelar' : 'Seguir editando'}</button>
         <button className="danger" disabled={busy} onClick={() => confirm === 'delete'
-          ? void update(refunds.filter(refund => refund.id !== original!.id), 'Reembolso eliminado') : back()}>
+          ? void update(refunds.filter(refund => refund.id !== original!.id), 'Reembolso eliminado', true) : back()}>
           {confirm === 'delete' ? 'Sí, eliminar' : 'Descartar cambios'}
         </button>
       </div>

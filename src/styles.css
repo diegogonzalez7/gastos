@@ -313,6 +313,11 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .file-preview { display: flex; align-items: center; gap: 9px; border-radius: 10px; background: var(--surface-soft); padding: 11px; margin-bottom: 12px; color: var(--accent); }
 .file-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .backup-feedback { margin-top: 14px; }
+.backup-extras { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 8px 0 0; border: 0; }
+.backup-extras legend { font-size: 14px; font-weight: 630; }
+.backup-extras label { display: flex; gap: 8px; align-items: center; min-height: 26px; font-size: 13px; }
+.backup-extras input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--button); }
+.confirm-panel .backup-extras { margin-top: 16px; }
 .cloud-backup > div { flex: 1; min-width: 0; }
 .cloud-setup { display: grid; gap: 10px; margin-top: 12px; }
 .cloud-setup > .secondary { justify-self: start; }
@@ -347,8 +352,10 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .settings-navigation small { margin-top: 2px; font-size: 12px; }
 .settings-local-note { margin-top: 14px; }
 .toast { position: fixed; bottom: 22px; left: calc(50% + var(--side-width) / 2); z-index: 4; transform: translateX(-50%); display: flex; justify-content: space-between; align-items: center; gap: 10px; border-radius: 12px; padding: 9px 12px; background: #203e34; color: #f6fff8; box-shadow: 0 5px 22px rgb(9 30 22 / 20%); font-size: 14px; font-weight: 530; max-width: calc(100vw - 32px); width: max-content; }
-.toast > svg { color: #b9e9c5; }
+.toast-message { display: flex; align-items: center; gap: 8px; }
+.toast-message > svg { color: #b9e9c5; flex-shrink: 0; }
 .toast button { display: grid; place-items: center; width: 28px; height: 28px; color: #dce9e1; }
+.toast .toast-undo { width: auto; min-height: 36px; padding-inline: 7px; color: inherit; font-weight: 680; text-decoration: underline; }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (min-width: 1450px) {

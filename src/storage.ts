@@ -1,9 +1,11 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { calendarDay, equalEntry, newEntryId, validMonth, type Entry, type Ledger } from './ledger'
+import { savedDesign, savedTheme, validDesign, validTheme, type Design, type Theme } from './appearance'
+import { readFavorites } from './favorites'
+import { calendarDay, equalEntry, newEntryId, validMonth, type BackupExtras, type Entry, type Favorite, type Ledger } from './ledger'
 import { sameReminder, type Reminder } from './reminders'
 
 interface LedgerDB extends DBSchema {
-  settings: { key: 'openingCents' | 'historyStart', value: number | string }
+  settings: { key: 'openingCents' | 'historyStart' | 'theme' | 'design' | 'favorites', value: number | string | Favorite[] }
   entries: { key: string, value: Entry }
   reminders: { key: string, value: Reminder }
 }
@@ -30,13 +32,41 @@ function database() {
   return connection
 }
 
-export async function readLedger(): Promise<Ledger & { reminders: Reminder[], historyStart: string }> {
+export async function readLedger(): Promise<Ledger & Required<BackupExtras> & { reminders: Reminder[] }> {
   const tx = (await database()).transaction(['entries', 'settings', 'reminders'])
   const settings = tx.objectStore('settings')
-  const [entries, opening, reminders, start] = await Promise.all([
+  const [entries, opening, reminders, start, theme, design, favorites] = await Promise.all([
     tx.objectStore('entries').getAll(), settings.get('openingCents'), tx.objectStore('reminders').getAll(), settings.get('historyStart'),
+    settings.get('theme'), settings.get('design'), settings.get('favorites'),
   ])
-  return { entries, openingCents: typeof opening === 'number' ? opening : 0, reminders, historyStart: validMonth(start) ? start : '2026-09' }
+  return {
+    entries, openingCents: typeof opening === 'number' ? opening : 0, reminders,
+    favorites: Array.isArray(favorites) ? favorites : readFavorites(),
+    settings: { historyStart: validMonth(start) ? start : '2026-09',
+      theme: validTheme(theme) ? theme : savedTheme(), design: validDesign(design) ? design : savedDesign() },
+  }
+}
+
+export async function saveTheme(theme: Theme) {
+  await (await database()).put('settings', theme, 'theme')
+  notifyReaders()
+}
+
+export async function saveDesign(design: Design) {
+  await (await database()).put('settings', design, 'design')
+  notifyReaders()
+}
+
+export async function saveFavorite(id: string, next: Favorite | null) {
+  const tx = (await database()).transaction('settings', 'readwrite')
+  const stored = await tx.store.get('favorites')
+  const favorites = Array.isArray(stored) ? stored : readFavorites()
+  const index = favorites.findIndex(favorite => favorite.id === id)
+  if (next && index === -1) favorites.push(next)
+  else if (index !== -1) favorites.splice(index, 1, ...(next ? [next] : []))
+  await Promise.all([tx.store.put(favorites, 'favorites'), tx.done])
+  notifyReaders()
+  return favorites
 }
 
 export async function saveHistoryStart(month: string) {
@@ -116,7 +146,7 @@ export async function changeReminder(original: Reminder, replacement: Reminder |
   notifyReaders()
 }
 
-export async function restoreLedger(ledger: Ledger, expected: Ledger) {
+export async function restoreLedger(ledger: Ledger, expected: Ledger, extras: BackupExtras = {}) {
   const tx = (await database()).transaction(['entries', 'settings', 'reminders'], 'readwrite')
   const store = tx.objectStore('entries')
   const settings = tx.objectStore('settings')
@@ -139,6 +169,14 @@ export async function restoreLedger(ledger: Ledger, expected: Ledger) {
     }
     await store.clear()
     await settings.put(ledger.openingCents, 'openingCents')
+    if (extras.favorites) await settings.put(extras.favorites, 'favorites')
+    if (extras.settings) {
+      await Promise.all([
+        settings.put(extras.settings.historyStart, 'historyStart'),
+        settings.put(extras.settings.theme, 'theme'),
+        settings.put(extras.settings.design, 'design'),
+      ])
+    }
     await Promise.all([...ledger.entries.map(entry => store.add(entry)), tx.done])
   } catch (error) {
     try { tx.abort() } catch { /* The failing request may already have aborted the transaction. */ }

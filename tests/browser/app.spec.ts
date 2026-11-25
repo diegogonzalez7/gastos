@@ -120,6 +120,47 @@ test('el filtro por forma de pago aplica el cobro de cada reembolso y suma las f
   await expect(net).toContainText('-30,00')
 })
 
+test('las copias permiten elegir si se exportan y restauran favoritos y ajustes', async ({ page }) => {
+  const preferences = {
+    favorites: [{ id: '12345678-1234-4234-8234-000000000007', category: 'machine', concept: 'Café guardado', cents: 42 }],
+    settings: { historyStart: '2020-04', design: 'plum', theme: 'dark' },
+  }
+  const restore = async (withSettings: boolean) => {
+    await backups(page)
+    await page.getByLabel('Archivo de copia').setInputFiles({
+      name: 'preferencias.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({
+        app: 'mi-dinero', version: 3, currency: 'EUR', openingCents: 0, transactions: [], ...preferences,
+      })),
+    })
+    await expect(page.getByRole('checkbox', { name: 'Restaurar ajustes', exact: true })).not.toBeChecked()
+    await expect(page.getByRole('checkbox', { name: /Restaurar favoritos/ })).not.toBeChecked()
+    await page.getByRole('checkbox', { name: /Restaurar favoritos/ }).check()
+    if (withSettings) await page.getByRole('checkbox', { name: 'Restaurar ajustes', exact: true }).check()
+    await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+  }
+  await restore(false)
+  await expect(page.getByRole('button', { name: /Registrar Café guardado/ })).toBeVisible()
+  await expect(page.locator('html')).not.toHaveAttribute('data-design', /.+/)
+  await restore(true)
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'plum')
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-design', 'plum')
+  const general = await openGeneral(page)
+  await expect(general.getByLabel('Año', { exact: true })).toHaveValue('2020')
+  await expect(general.getByLabel('Mes', { exact: true })).toHaveValue('04')
+  await general.getByRole('button', { name: 'Cerrar', exact: true }).click()
+
+  await backups(page)
+  await page.getByRole('checkbox', { name: 'Incluir favoritos', exact: true }).check()
+  await page.getByRole('checkbox', { name: /Incluir ajustes/ }).check()
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Descargar copia', exact: true }).click()
+  const exported = JSON.parse(await readFile((await (await download).path())!, 'utf8'))
+  expect(exported.favorites).toEqual(preferences.favorites)
+  expect(exported.settings).toEqual(preferences.settings)
+})
+
 test('Ajustes agrupa las opciones y permite volver desde sus secciones', async ({ page }) => {
   const more = page.getByRole('button', { name: 'Más', exact: true })
   let menu = page.locator('.sidebar-bottom')
@@ -423,8 +464,10 @@ test('Dropbox conserva varias copias y permite restaurarlas entre dispositivos',
     await add(page, 'Café desde el móvil', '0,90', '2026-11-24', 'machine')
     await backups(page)
     const upload = (target: Page) => target.getByRole('button', { name: 'Subir copia a la nube' }).click()
+    await page.getByRole('checkbox', { name: /Incluir ajustes/ }).check()
     await upload(page)
     await expect(page.getByText('Copia subida a la carpeta privada de Dropbox.')).toBeVisible()
+    expect(JSON.parse(cloud.get('id:copy-1')!.contents).settings).toEqual({ historyStart: '2026-01', theme: 'system', design: 'original' })
 
     await connect(second, 'codigo-pc')
     const openLatest = async (target: Page, count: number) => {
@@ -626,7 +669,7 @@ test('el saldo bancario separa el efectivo y las retiradas del balance mensual a
   await navigate(page, 'Movimientos')
   await page.getByRole('button', { name: 'Retiradas', exact: true }).click()
   await expect(page.locator('.entry-row')).toHaveCount(1)
-  await expect(page.getByRole('button', { name: 'Editar Retirada de efectivo' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Editar Retirada de efectivo' })).toContainText('Cuenta bancaria → Efectivo')
 })
 
 test('un reembolso en otro mes se ve por fecha y corrige el gasto original', async ({ page }) => {
@@ -671,8 +714,21 @@ test('un reembolso en otro mes se ve por fecha y corrige el gasto original', asy
   await page.getByRole('button', { name: 'Sí, eliminar' }).click()
   await expect(bank.nth(2)).toContainText('-40,00')
   await expect(row).toHaveCount(0)
+  await page.getByRole('button', { name: 'Deshacer', exact: true }).click()
+  await expect(row).toBeVisible()
+  await expect(bank.nth(2)).toContainText('-20,00')
   await page.getByRole('button', { name: 'Mes anterior' }).click()
-  await balance(page, '-40,00€')
+  await balance(page, '-20,00€')
+  const purchase = page.getByRole('button', { name: 'Editar Cena compartida' })
+  await purchase.click()
+  await page.getByRole('button', { name: 'Eliminar movimiento', exact: true }).click()
+  await page.getByRole('button', { name: 'Sí, eliminar' }).click()
+  await balance(page, '0,00€')
+  await page.getByRole('button', { name: 'Deshacer', exact: true }).click()
+  await balance(page, '-20,00€')
+  await expect(bank.nth(2)).toContainText('-20,00')
+  await page.getByRole('button', { name: 'Mes siguiente' }).click()
+  await expect(row).toBeVisible()
 })
 
 test('editar el tipo y la fecha traslada el importe al mes correcto', async ({ page }) => {

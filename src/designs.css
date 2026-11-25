@@ -153,7 +153,7 @@
 :root[data-design] :is(.search-box:focus-within, .amount-input:focus-within) { outline-color: var(--accent); }
 :root[data-design] :is(.quick-button, .available-categories button):hover { border-color: var(--accent); }
 :root[data-design] .toast { color: var(--text); background: var(--surface-hover); border: 1px solid var(--line); }
-:root[data-design] .toast > svg { color: var(--positive); }
+:root[data-design] .toast-message > svg { color: var(--positive); }
 :root[data-design] .toast button { color: var(--secondary); }
 :root[data-design] .local-status span { background: var(--positive); }
 

@@ -52,6 +52,18 @@ test('la copia versionada admite todos los movimientos y también una cartera va
   }
 })
 
+test('las preferencias de una copia son opcionales y se validan como parte del archivo', () => {
+  const ledger = { entries: [], openingCents: 0 }
+  const favorites = [{ id: expense.id, concept: 'Café', category: 'machine' as const, cents: 42 }]
+  const settings = { historyStart: '2024-02', design: 'midnight' as const, theme: 'dark' as const }
+  assert.deepEqual(readBackup(JSON.stringify(makeBackup(ledger))), ledger)
+  const copy = makeBackup(ledger, { favorites, settings })
+  assert.deepEqual(readBackup(JSON.stringify(copy)), { ...ledger, favorites, settings })
+  for (const patch of [{ favorites: [...favorites, ...favorites] }, { settings: { ...settings, historyStart: '2024-13' } }]) {
+    assert.throws(() => readBackup(JSON.stringify({ ...copy, ...patch })))
+  }
+})
+
 test('una copia dañada, incompatible o duplicada se rechaza entera', () => {
   for (const patch of [
     { cents: 0 }, { cents: 1.5 }, { cents: 1e15 }, { concept: 9 }, { kind: 'something' },

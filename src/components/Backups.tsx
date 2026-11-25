@@ -2,7 +2,7 @@ import { useState, type ChangeEvent } from 'react'
 import { CloudUpload, Download, FileCheck2, FolderOpen, HardDrive, Share2, Upload } from 'lucide-react'
 import { savedDropbox, uploadDropboxBackup } from '../dropbox'
 import { downloadFile } from '../files'
-import { calendarDay, compareEntries, dateLabel, makeBackup, monthLabel, readBackup, money, validDay, type Ledger } from '../ledger'
+import { calendarDay, compareEntries, dateLabel, makeBackup, monthLabel, readBackup, money, validDay, type BackupExtras, type Ledger } from '../ledger'
 import { readLedger, restoreLedger, storageMessage } from '../storage'
 import { CloudBackups } from './CloudBackups'
 import { Modal } from './ui'
@@ -10,10 +10,7 @@ import { Modal } from './ui'
 const lastExportKey = 'mi-dinero:last-export'
 const backupType = 'application/json'
 
-function backupFile(ledger: Ledger, beforeRestoring = false) {
-  const prefix = beforeRestoring ? 'mi-dinero-antes-de-restaurar-' : 'mi-dinero-'
-  return new File([JSON.stringify(makeBackup(ledger), null, 2)], prefix + calendarDay() + '.json', { type: backupType })
-}
+type BackupSnapshot = Ledger & Required<BackupExtras>
 
 function readLastExport() {
   try {
@@ -38,7 +35,7 @@ function monthRange(entries: Ledger['entries']) {
 }
 
 export function Backups({ ledger, onClose, onBack, onRestored }: {
-  ledger: Ledger | null, onClose: () => void, onBack: () => void, onRestored: () => void,
+  ledger: BackupSnapshot | null, onClose: () => void, onBack: () => void, onRestored: () => void,
 }) {
   const [busy, setBusy] = useState(false)
   const [cloudBusy, setCloudBusy] = useState(false)
@@ -46,11 +43,24 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
   const [notice, setNotice] = useState('')
   const [dropbox, setDropbox] = useState(savedDropbox)
   const [lastExport, setLastExport] = useState(readLastExport)
+  const [includeFavorites, setIncludeFavorites] = useState(false)
+  const [includeSettings, setIncludeSettings] = useState(false)
+  const [restoreFavorites, setRestoreFavorites] = useState(false)
+  const [restoreSettings, setRestoreSettings] = useState(false)
   const [canShare] = useState(() => !!navigator.share &&
     !!navigator.canShare?.({ files: [new File(['{}'], 'mi-dinero.json', { type: backupType })] }))
   const [preview, setPreview] = useState<{
-    file: string, ledger: Ledger, current: Ledger, months: string | null, changes: ReturnType<typeof compareEntries>,
+    file: string, ledger: Ledger & BackupExtras, current: BackupSnapshot, months: string | null, changes: ReturnType<typeof compareEntries>,
   } | null>(null)
+
+  function backupFile(snapshot: BackupSnapshot, beforeRestoring = false) {
+    const prefix = beforeRestoring ? 'mi-dinero-antes-de-restaurar-' : 'mi-dinero-'
+    const extras = {
+      favorites: includeFavorites || (beforeRestoring && restoreFavorites) ? snapshot.favorites : undefined,
+      settings: includeSettings || (beforeRestoring && restoreSettings) ? snapshot.settings : undefined,
+    }
+    return new File([JSON.stringify(makeBackup(snapshot, extras), null, 2)], prefix + calendarDay() + '.json', { type: backupType })
+  }
 
   function recordExport(message: string) {
     const date = calendarDay()
@@ -107,6 +117,8 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
   async function review(file: string, text: string) {
     const ledger = readBackup(text)
     const current = await latestLedger()
+    setRestoreFavorites(false)
+    setRestoreSettings(false)
     setPreview({ file, ledger, current, months: monthRange(ledger.entries), changes: compareEntries(current.entries, ledger.entries) })
   }
 
@@ -125,7 +137,13 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
     if (!preview || busy) return
     setBusy(true)
     setError('')
-    try { await restoreLedger(preview.ledger, preview.current); onRestored() }
+    try {
+      await restoreLedger(preview.ledger, preview.current, {
+        favorites: restoreFavorites ? preview.ledger.favorites : undefined,
+        settings: restoreSettings ? preview.ledger.settings : undefined,
+      })
+      onRestored()
+    }
     catch (err) { setError(storageMessage(err)); setBusy(false) }
   }
 
@@ -157,7 +175,15 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
         {preview.ledger.openingCents !== preview.current.openingCents && <> Saldo inicial actual: <strong className="money">{money(preview.current.openingCents)}</strong>.</>}</p>
       {preview.ledger.reminders && <p>Recordatorios que se restaurarán: <strong>{preview.ledger.reminders.length}</strong>.</p>}
       {preview.ledger.entries.length === 0 && <p className="form-error">Esta copia dejará tu historial vacío.</p>}
-      {(preview.current.entries.length > 0 || preview.current.openingCents !== 0 || !!preview.current.reminders?.length) &&
+      {(preview.ledger.favorites || preview.ledger.settings) && <fieldset className="backup-extras">
+        <legend>Restaurar también</legend>
+        {preview.ledger.favorites && <label><input type="checkbox" checked={restoreFavorites} disabled={busy}
+          onChange={event => setRestoreFavorites(event.target.checked)} />Restaurar favoritos ({preview.ledger.favorites.length})</label>}
+        {preview.ledger.settings && <label><input type="checkbox" checked={restoreSettings} disabled={busy}
+          onChange={event => setRestoreSettings(event.target.checked)} />Restaurar ajustes</label>}
+        <p className="entry-hint">Las opciones marcadas reemplazan las de este dispositivo.</p>
+      </fieldset>}
+      {(preview.current.entries.length > 0 || preview.current.openingCents !== 0 || !!preview.current.reminders?.length || restoreFavorites || restoreSettings) &&
         <div className="backup-actions save-before-restore">
           {dropbox.refreshToken && <button className="secondary" disabled={busy} onClick={protectInDropbox}>
             <CloudUpload size={16} />Guardar mi historial actual en Dropbox
@@ -173,6 +199,11 @@ export function Backups({ ledger, onClose, onBack, onRestored }: {
     </div>}
     <div hidden={!!preview}><div className="backup-options">
       <p className="local-note"><HardDrive size={19} />Tus movimientos se guardan en este dispositivo. Conserva una copia para recuperarlos o llevarlos a otro dispositivo.</p>
+      <fieldset className="backup-extras">
+        <legend>Incluir al crear una copia</legend>
+        <label><input type="checkbox" checked={includeFavorites} disabled={busy} onChange={event => setIncludeFavorites(event.target.checked)} />Incluir favoritos</label>
+        <label><input type="checkbox" checked={includeSettings} disabled={busy} onChange={event => setIncludeSettings(event.target.checked)} />Incluir ajustes de tema, diseño y mes de inicio</label>
+      </fieldset>
       <CloudBackups settings={dropbox} onSettings={setDropbox} busy={busy} run={runCloud} makeFile={async () => backupFile(await latestLedger())} review={review}
         onUploaded={() => recordExport('Copia subida a la carpeta privada de Dropbox.')} />
       <div className="backup-option"><span className="utility-icon"><Download size={21} /></span>

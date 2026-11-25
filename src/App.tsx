@@ -6,7 +6,7 @@ import {
 import {
   accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
 } from './ledger'
-import { readLedger, storageMessage, watchEntries } from './storage'
+import { readLedger, saveDesign, saveEntry, saveFavorite, saveTheme, storageMessage, watchEntries } from './storage'
 import { Brand, Modal } from './components/ui'
 import { Backups } from './components/Backups'
 import { MonthControl } from './components/Calendar'
@@ -15,13 +15,14 @@ import { OpeningBalance } from './components/OpeningBalance'
 import { Refunds } from './components/Refunds'
 import { Editor, type EditorDraft } from './components/Editor'
 import { CategoryView, Dashboard, FavoriteManager, History } from './components/LedgerViews'
-import { favoritesKey, readFavorites, saveFavorite, type Favorite } from './favorites'
+import { readFavorites, type Favorite } from './favorites'
 import { Reminders } from './components/Reminders'
 import { MonthlyAlert } from './components/MonthlyAlert'
 import { MonthlyStory, MonthlyStoryLink } from './components/MonthlyStory'
 import { monthlyReport } from './monthlyReport'
 import type { Reminder } from './reminders'
-import { DesignPicker, designKey, designLabel, savedDesign, type Design, type Theme } from './components/DesignPicker'
+import { DesignPicker } from './components/DesignPicker'
+import { cacheAppearance, designLabel, savedDesign, savedTheme, type Design, type Theme } from './appearance'
 
 const pages = {
   resumen: { label: 'Resumen', icon: LayoutDashboard },
@@ -51,13 +52,6 @@ const themeOptions: { value: Theme, label: string, icon: LucideIcon }[] = [
   { value: 'light', label: 'Claro', icon: Sun },
   { value: 'dark', label: 'Oscuro', icon: Moon },
 ]
-function savedTheme(): Theme {
-  try {
-    const theme = localStorage.getItem('mi-dinero:theme')
-    if (theme === 'light' || theme === 'dark') return theme
-  } catch { /* System appearance works without Web Storage. */ }
-  return 'system'
-}
 function ThemeControl({ theme, onChange }: { theme: Theme, onChange: (theme: Theme) => void }) {
   return <div className="theme-control" role="group" aria-label="Apariencia">
     {themeOptions.map(({ value, label, icon: Icon }) => <button key={value} onClick={() => onChange(value)}
@@ -87,7 +81,8 @@ export default function App() {
   const [utility, setUtility] = useState<(typeof settingsSections)[number]['id'] | 'more' | 'reminders' | 'designs' | 'favorites' | 'settings' | null>(null)
   const [storyMonth, setStoryMonth] = useState<string | null>(null)
   const [seenReport, setSeenReport] = useState(savedSeenReport)
-  const [toast, setToast] = useState<{ label: string } | null>(null)
+  const [toast, setToast] = useState<{ label: string, undo?: () => Promise<void> } | null>(null)
+  const undoInProgress = useRef(false)
   const sequence = useRef(0)
 
   const reload = useCallback(async () => {
@@ -98,8 +93,12 @@ export default function App() {
         setOpeningCents(ledger.openingCents)
         setEntries(latestFirst(ledger.entries))
         setReminders(ledger.reminders)
-        setFirstHistoryMonth(ledger.historyStart)
-        setMonth(selected => selected < ledger.historyStart ? ledger.historyStart : selected)
+        setFirstHistoryMonth(ledger.settings.historyStart)
+        setMonth(selected => selected < ledger.settings.historyStart ? ledger.settings.historyStart : selected)
+        setTheme(ledger.settings.theme)
+        setDesign(ledger.settings.design)
+        setFavorites(ledger.favorites)
+        cacheAppearance(ledger.settings.theme, ledger.settings.design)
         setLoadState('ready')
       }
     } catch (err) {
@@ -107,13 +106,6 @@ export default function App() {
     }
   }, [])
   useEffect(() => { void reload(); return watchEntries(reload) }, [reload])
-  useEffect(() => {
-    const refreshFavorites = (event: StorageEvent) => {
-      if (event.key === favoritesKey || event.key === null) setFavorites(readFavorites())
-    }
-    window.addEventListener('storage', refreshFavorites)
-    return () => window.removeEventListener('storage', refreshFavorites)
-  }, [])
   useEffect(() => {
     let timer: number
     let localMonth = calendarDay().slice(0, 7)
@@ -167,7 +159,7 @@ export default function App() {
   }, [design, theme])
   useEffect(() => {
     if (!toast) return
-    const timer = window.setTimeout(() => setToast(null), 3600)
+    const timer = window.setTimeout(() => setToast(null), toast.undo ? 10_000 : 3600)
     return () => window.clearTimeout(timer)
   }, [toast])
 
@@ -184,14 +176,22 @@ export default function App() {
   const report = useMemo(() => storyMonth && storyMonth >= firstHistoryMonth
     ? monthlyReport(entries, openingCents, storyMonth, firstHistoryMonth) : null, [entries, openingCents, storyMonth, firstHistoryMonth])
   const wholeHistory = page === 'movimientos' && allMonths
-  function notify(label: string) { setToast({ label }) }
-  function changeTheme(next: Theme) {
-    setTheme(next)
-    try { localStorage.setItem('mi-dinero:theme', next) } catch { /* Keep the choice for this session. */ }
+  function notify(label: string, undo?: () => Promise<void>) { setToast({ label, undo }) }
+  async function undoDeletion(action: () => Promise<void>) {
+    if (undoInProgress.current) return
+    undoInProgress.current = true
+    notify('Recuperando…')
+    try { await action(); await reload(); notify('Movimiento recuperado') }
+    catch (error) { notify(error instanceof DOMException && error.name === 'ConstraintError' ? 'El movimiento ya existe.' : storageMessage(error)) }
+    finally { undoInProgress.current = false }
   }
-  function changeDesign(next: Design) {
-    setDesign(next)
-    try { localStorage.setItem(designKey, next) } catch { /* Keep the design for this session. */ }
+  async function changeTheme(next: Theme) {
+    try { await saveTheme(next); await reload() }
+    catch (error) { notify(storageMessage(error)) }
+  }
+  async function changeDesign(next: Design) {
+    try { await saveDesign(next); await reload() }
+    catch (error) { notify(storageMessage(error)) }
   }
   function goTo(next: Page) {
     if (page !== next) location.hash = next
@@ -216,16 +216,16 @@ export default function App() {
     setUtility(null)
     setEditor({ date: calendarDay(), favorite, mode: 'favorite' })
   }
-  function changeFavorite(id: string, favorite: Favorite | null) {
-    setFavorites(saveFavorite(id, favorite))
+  async function changeFavorite(id: string, favorite: Favorite | null) {
+    setFavorites(await saveFavorite(id, favorite))
     setEditor(null)
     notify(favorite ? 'Favorito guardado' : 'Favorito eliminado')
   }
-  function saved(date: string | null, message: string) {
+  function saved(date: string | null, message: string, undo?: () => Promise<void>) {
     if (date) setMonth(date.slice(0, 7))
     setEditor(null)
     void reload()
-    notify(message)
+    notify(message, undo)
   }
   function openMonthlyStory() {
     if (!reportLinkMonth) return
@@ -289,11 +289,12 @@ export default function App() {
     {editingOpening !== null && <OpeningBalance original={editingOpening} onClose={() => setEditingOpening(null)}
       onSaved={() => { setEditingOpening(null); void reload(); notify('Saldo inicial guardado') }} />}
     {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} firstHistoryDay={firstHistoryDay} onClose={() => setEditor(null)}
-      onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} onFavorite={changeFavorite} onRefunds={openRefunds} />}
+      onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} onFavorite={changeFavorite} onRefunds={openRefunds}
+      onDeleted={entry => saved(null, 'Movimiento eliminado', () => saveEntry(entry))} />}
     {refundDialog && <Refunds entry={refundDialog.entry} selected={refundDialog.selected} firstHistoryDay={firstHistoryDay} onClose={() => {
       if (!refundDialog.selected) edit(refundDialog.entry)
       setRefundDialog(null)
-    }} onSaved={message => { setRefundDialog(null); void reload(); notify(message) }} />}
+    }} onSaved={(message, undo) => { setRefundDialog(null); void reload(); notify(message, undo) }} />}
     {utility === 'favorites' && <FavoriteManager favorites={favorites} onEdit={editFavorite} onClose={() => setUtility(null)} />}
     {report && <MonthlyStory key={report.month} report={report} onClose={() => setStoryMonth(null)}
       onHistory={() => { setStoryMonth(null); setMonth(report.month); showHistory() }}
@@ -331,8 +332,13 @@ export default function App() {
       void reload()
       notify('Mes de inicio guardado')
     }} />}
-    {utility === 'backup' && <Backups ledger={loadState === 'ready' ? { entries, openingCents, reminders } : null} onClose={closeUtility} onBack={backToSettings}
+    {utility === 'backup' && <Backups ledger={loadState === 'ready' ? {
+      entries, openingCents, reminders, favorites, settings: { historyStart: firstHistoryMonth, theme, design },
+    } : null} onClose={closeUtility} onBack={backToSettings}
       onRestored={() => { setUtility(null); void reload(); notify('Copia restaurada') }} />}
-    {toast && <div className="toast" role="status"><Check size={17} />{toast.label}<button aria-label="Ocultar aviso" onClick={() => setToast(null)}><X size={14} /></button></div>}
+    {toast && <div className="toast"><span className="toast-message" role="status"><Check size={17} />{toast.label}</span>
+      {toast.undo && <button className="toast-undo" onClick={() => { if (toast.undo) void undoDeletion(toast.undo) }}>Deshacer</button>}
+      <button aria-label="Ocultar aviso" onClick={() => setToast(null)}><X size={14} /></button>
+    </div>}
   </div>
 }

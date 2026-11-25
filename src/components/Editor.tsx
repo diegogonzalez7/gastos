@@ -7,10 +7,10 @@ import { AmountInput, Modal } from './ui'
 
 export interface EditorDraft { original?: Entry, copy?: Entry, category?: CategoryId, date: string, favorite?: Favorite, mode?: 'favorite' }
 
-export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds, onSaved, onFavorite }: {
+export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds, onSaved, onDeleted, onFavorite }: {
   firstHistoryDay: string,
   draft: EditorDraft, onClose: () => void, onDuplicate: (entry: Entry) => void, onSaved: (date: string | null, message: string) => void,
-  onFavorite: (id: string, favorite: Favorite | null) => void,
+  onFavorite: (id: string, favorite: Favorite | null) => Promise<void>, onDeleted: (entry: Entry) => void,
   onRefunds: (entry: Entry) => void,
 }) {
   const old = draft.original
@@ -77,7 +77,7 @@ export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds
       const method = kind === 'expense' || effectivePayment === 'cash' ? { payment: effectivePayment } : {}
       if (editingFavorite) {
         const id = oldFavorite?.id ?? newEntryId()
-        onFavorite(id, { id, cents, category, concept: concept.trim(), ...method })
+        await onFavorite(id, { id, cents, category, concept: concept.trim(), ...method })
         return
       }
       const entry: Entry = {
@@ -97,8 +97,8 @@ export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds
     setBusy(true)
     setError('')
     try {
-      if (oldFavorite) onFavorite(oldFavorite.id, null)
-      else if (old) { await changeEntry(old, null); onSaved(null, 'Movimiento eliminado') }
+      if (oldFavorite) await onFavorite(oldFavorite.id, null)
+      else if (old) { await changeEntry(old, null); onDeleted(old) }
     }
     catch (err) { setError(storageMessage(err)); setBusy(false) }
   }

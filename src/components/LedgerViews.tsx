@@ -17,13 +17,14 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
   const title = !categoryFirst && entry.concept ? entry.concept : categoryName
   const accessibleTitle = categoryFirst && entry.concept && entry.concept !== title ? `${title} · ${entry.concept}` : title
   const description = useId()
-  const paymentLabel = entry.kind === 'withdrawal' ? '' : paymentSource(entry) === 'cash' ? ' · Efectivo' : ' · Cuenta bancaria'
-  const detail = (!categoryFirst && entry.concept) || entry.kind === 'withdrawal' ? categoryName : incoming ? 'Ingreso' : 'Gasto'
+  const paymentLabel = paymentSource(entry) === 'cash' ? 'Efectivo' : 'Cuenta bancaria'
+  const categoryDetail = !categoryFirst && entry.concept ? categoryName : incoming ? 'Ingreso' : 'Gasto'
+  const detail = entry.kind === 'withdrawal' ? 'Cuenta bancaria → Efectivo' : `${categoryDetail} · ${paymentLabel}`
   return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={'Editar ' + accessibleTitle}
     aria-describedby={description + '-category ' + description + '-amount'}>
     <CategoryBadge category={category} />
     <span className="entry-info"><strong>{title}</strong><small id={description + '-category'}>
-      {detail}{paymentLabel}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
+      {detail}{showDate && ' · ' + dateLabel(entry.date, { day: 'numeric', month: 'short' })}
     </small></span>
     <span className={'entry-value money' + (incoming ? ' positive' : '')} id={description + '-amount'}>{incoming ? '+' : '−'}{money(entry.cents)}</span>
     <ChevronRight className="entry-chevron" size={15} />
