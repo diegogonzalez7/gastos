@@ -137,3 +137,8 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - El enlace abre el cierre del mes anterior al seleccionado. El selector, los formularios y el historial visible parten de septiembre de 2026. Los movimientos anteriores guardados siguen en las copias y en el cálculo bancario.
 - Las historias avanzan tras 30 segundos, con barra de progreso, toques, deslizamiento y pausa. La pantalla final permite volver al inicio o consultar los movimientos del mes.
 - La comparación destaca el importe y el porcentaje gastado de más o de menos. Con un mes anterior sin gastos, se muestra la diferencia en euros.
+
+## Mes de inicio configurable
+
+- Ajustes permite elegir el primer mes del calendario, los movimientos y los cierres. La preferencia se guarda en el dispositivo. Las instalaciones anteriores parten de septiembre de 2026 y las nuevas de enero del año actual.
+- La prueba de navegador verifica que un inicio en abril de 2020 se recuerda y que los movimientos ocultos reaparecen al ampliar el periodo. Las copias y el saldo conservan los movimientos previos.

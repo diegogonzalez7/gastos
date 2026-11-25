@@ -1,6 +1,6 @@
-import { accountBalances, firstHistoryMonth, monthly, netExpense, shiftMonth, summarize, type Entry } from './ledger.ts'
+import { accountBalances, monthly, netExpense, shiftMonth, summarize, type Entry } from './ledger.ts'
 
-export function monthlyReport(entries: Entry[], openingCents: number, month: string) {
+export function monthlyReport(entries: Entry[], openingCents: number, month: string, firstHistoryMonth: string) {
   const movements = monthly(entries, month)
   const totals = summarize(movements)
   const previousMonth = shiftMonth(month, -1)

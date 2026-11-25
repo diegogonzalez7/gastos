@@ -17,7 +17,7 @@ const entries: Entry[] = [
 ]
 
 test('el cierre usa solo su mes, reúne categorías antiguas y arrastra el saldo correcto', () => {
-  const report = monthlyReport(entries, 350000, '2026-11')
+  const report = monthlyReport(entries, 350000, '2026-11', '2026-09')
   assert.equal(report.totals.balance, 89410)
   assert.deepEqual(report.totals.breakdown.map(item => [item.category, item.cents]), [['food', 10500], ['machine', 90]])
   assert.equal(report.largestExpense, expense)
@@ -28,7 +28,7 @@ test('el cierre usa solo su mes, reúne categorías antiguas y arrastra el saldo
 })
 
 test('un mes vacío no inventa gastos y mantiene su saldo acumulado', () => {
-  const report = monthlyReport(entries, 350000, '2027-01')
+  const report = monthlyReport(entries, 350000, '2027-01', '2026-09')
   assert.equal(report.movementCount, 0)
   assert.equal(report.totals.expense, 0)
   assert.equal(report.largestExpense, null)
@@ -37,11 +37,13 @@ test('un mes vacío no inventa gastos y mantiene su saldo acumulado', () => {
 
 test('septiembre abre el historial visible y una comparación puede partir de cero', () => {
   const august = { ...expense, date: '2026-08-31' }
-  const september = monthlyReport([august], 0, '2026-09')
+  const september = monthlyReport([august], 0, '2026-09', '2026-09')
   assert.equal(september.previous, null)
   assert.equal(september.closing, -9000)
-  const october = monthlyReport(entries, 0, '2026-10')
+  const october = monthlyReport(entries, 0, '2026-10', '2026-09')
   assert.deepEqual(october.previous, { month: '2026-09', expense: 0 })
+  const april = { ...expense, date: '2020-04-01' }
+  assert.deepEqual(monthlyReport([april], 0, '2020-05', '2020-04').previous, { month: '2020-04', expense: 9000 })
 })
 
 test('el aviso de calendario se repite el día 1 a las 09:00 también al cambiar de año', () => {

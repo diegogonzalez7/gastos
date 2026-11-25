@@ -3,7 +3,7 @@ import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Star, Wallet, X,
 } from 'lucide-react'
 import {
-  capitalize, categories, categoryIds, dateLabel, displayCategory, firstHistoryDay, money, paymentSource, percent, searchText,
+  capitalize, categories, categoryIds, dateLabel, displayCategory, money, paymentSource, percent, searchText,
   type CategoryId, type Entry, type Kind, type Refund, type Summary,
 } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
@@ -32,7 +32,7 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
 
 type Movement = { entry: Entry, date: string, refund?: Refund }
 
-function movementRows(entries: Entry[], month: string | null) {
+function movementRows(entries: Entry[], month: string | null, firstHistoryDay: string) {
   const rows: Movement[] = []
   for (const entry of entries) {
     if (entry.date >= firstHistoryDay && (month === null || entry.date.startsWith(month))) rows.push({ entry, date: entry.date })
@@ -127,6 +127,7 @@ interface DashboardProps {
   totals: Summary
   entries: Entry[]
   month: string
+  firstHistoryDay: string
   onAdd: (category?: CategoryId) => void
   onEdit: (entry: Entry) => void
   onEditRefund: (entry: Entry, refund: Refund) => void
@@ -137,8 +138,8 @@ interface DashboardProps {
   onManageFavorites: () => void
 }
 
-export function Dashboard({ account, openingCents, onOpening, totals, entries, month, onAdd, onEdit, onEditRefund, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
-  const recent = movementRows(entries, month).slice(0, 5)
+export function Dashboard({ account, openingCents, onOpening, totals, entries, month, firstHistoryDay, onAdd, onEdit, onEditRefund, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
+  const recent = movementRows(entries, month, firstHistoryDay).slice(0, 5)
   return <div className="view-stack">
     <Balance totals={totals} />
     <section className="panel account-strip" aria-label="Saldos de la cuenta">
@@ -173,14 +174,14 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, m
   </div>
 }
 
-export function History({ entries, month, category, onClearCategory, onEdit, onEditRefund, onAdd }: {
-  entries: Entry[], month: string | null, category: CategoryId | null, onClearCategory: () => void,
+export function History({ entries, month, firstHistoryDay, category, onClearCategory, onEdit, onEditRefund, onAdd }: {
+  entries: Entry[], month: string | null, firstHistoryDay: string, category: CategoryId | null, onClearCategory: () => void,
   onEdit: (entry: Entry) => void, onEditRefund: (entry: Entry, refund: Refund) => void, onAdd: () => void,
 }) {
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<Kind | 'all'>('all')
   const keyword = searchText(query)
-  const rows = movementRows(entries, month).filter(({ entry, refund }) => {
+  const rows = movementRows(entries, month, firstHistoryDay).filter(({ entry, refund }) => {
     const displayed = displayCategory(entry.category)
     return (kind === 'all' || (!refund && entry.kind === kind)) && (!category || displayed === category) &&
       (!keyword || searchText([entry.concept, categories[displayed].name, refund ? 'Reembolso' : ''].join(' ')).includes(keyword))

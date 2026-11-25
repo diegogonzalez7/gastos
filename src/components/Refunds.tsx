@@ -1,10 +1,11 @@
 import { useId, useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
-import { calendarDay, categories, dateLabel, displayCategory, firstHistoryDay, money, netExpense, newEntryId, parseAmount, refundedCents, validDay, type Entry, type PaymentSource, type Refund } from '../ledger'
+import { calendarDay, categories, dateLabel, displayCategory, money, monthLabel, netExpense, newEntryId, parseAmount, refundedCents, validDay, type Entry, type PaymentSource, type Refund } from '../ledger'
 import { changeEntry, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
 
-export function Refunds({ entry, selected, onClose, onSaved }: {
+export function Refunds({ entry, selected, firstHistoryDay, onClose, onSaved }: {
+  firstHistoryDay: string,
   entry: Entry, selected?: Refund, onClose: () => void, onSaved: (message: string) => void,
 }) {
   const refunds = entry.refunds ?? []
@@ -59,7 +60,7 @@ export function Refunds({ entry, selected, onClose, onSaved }: {
     const cents = parseAmount(amount)
     if (!cents || cents > maximum) { setError(`Introduce un importe entre 0,01 € y ${money(maximum)}.`); return }
     if (!validDay(date)) { setError('Elige una fecha de cobro válida.'); return }
-    if (date < firstHistoryDay) { setError('El historial empieza en septiembre de 2026.'); return }
+    if (date < firstHistoryDay) { setError(`El historial empieza en ${monthLabel(firstHistoryDay.slice(0, 7)).toLocaleLowerCase('es')}.`); return }
     const refund = { id: original?.id ?? newEntryId(), cents, date, payment }
     const next = original ? refunds.map(item => item.id === original.id ? refund : item) : [...refunds, refund]
     void update(next, original ? 'Reembolso actualizado' : 'Reembolso registrado')

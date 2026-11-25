@@ -1,20 +1,21 @@
 import { useState } from 'react'
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
-import { calendarDay, capitalize, dateLabel, firstHistoryMonth, monthLabel, shiftMonth } from '../ledger'
+import { calendarDay, capitalize, dateLabel, monthLabel, shiftMonth } from '../ledger'
 import { Modal } from './ui'
 
 interface CalendarProps {
   month: string
+  firstHistoryMonth: string
   allMonths: boolean
   allowAll: boolean
   onChange: (month: string, all?: boolean) => void
 }
 
-const firstYear = Number(firstHistoryMonth.slice(0, 4))
-
-export function MonthControl({ month, allMonths, allowAll, onChange }: CalendarProps) {
+export function MonthControl({ month, firstHistoryMonth, allMonths, allowAll, onChange }: CalendarProps) {
   const [open, setOpen] = useState(false)
-  const [year, setYear] = useState(Number(month.slice(0, 4)))
+  const [selectedYear, setYear] = useState(Number(month.slice(0, 4)))
+  const firstYear = Number(firstHistoryMonth.slice(0, 4))
+  const year = Math.max(firstYear, selectedYear)
   const label = allMonths ? 'Todos los meses' : monthLabel(month).replace(' de ', ' ')
   const compactLabel = allMonths ? 'Todos' : capitalize(dateLabel(month + '-01', { month: 'short' })) + ' ' + Number(month.slice(0, 4))
   function select(value: string, all = false) {

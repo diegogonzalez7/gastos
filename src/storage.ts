@@ -1,9 +1,9 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import { equalEntry, newEntryId, type Entry, type Ledger } from './ledger'
+import { calendarDay, equalEntry, newEntryId, validMonth, type Entry, type Ledger } from './ledger'
 import { sameReminder, type Reminder } from './reminders'
 
 interface LedgerDB extends DBSchema {
-  settings: { key: 'openingCents', value: number }
+  settings: { key: 'openingCents' | 'historyStart', value: number | string }
   entries: { key: string, value: Entry }
   reminders: { key: string, value: Reminder }
 }
@@ -14,7 +14,10 @@ function database() {
     connection = openDB<LedgerDB>('mi-dinero', 3, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) db.createObjectStore('entries', { keyPath: 'id' })
-        if (oldVersion < 2) db.createObjectStore('settings')
+        if (oldVersion < 2) {
+          const settings = db.createObjectStore('settings')
+          if (oldVersion === 0) void settings.put(calendarDay().slice(0, 4) + '-01', 'historyStart')
+        }
         if (oldVersion < 3) db.createObjectStore('reminders', { keyPath: 'id' })
       },
       blocking(_old, _new, event) {
@@ -27,12 +30,18 @@ function database() {
   return connection
 }
 
-export async function readLedger(): Promise<Ledger & { reminders: Reminder[] }> {
+export async function readLedger(): Promise<Ledger & { reminders: Reminder[], historyStart: string }> {
   const tx = (await database()).transaction(['entries', 'settings', 'reminders'])
-  const [entries, opening, reminders] = await Promise.all([
-    tx.objectStore('entries').getAll(), tx.objectStore('settings').get('openingCents'), tx.objectStore('reminders').getAll(),
+  const settings = tx.objectStore('settings')
+  const [entries, opening, reminders, start] = await Promise.all([
+    tx.objectStore('entries').getAll(), settings.get('openingCents'), tx.objectStore('reminders').getAll(), settings.get('historyStart'),
   ])
-  return { entries, openingCents: opening ?? 0, reminders }
+  return { entries, openingCents: typeof opening === 'number' ? opening : 0, reminders, historyStart: validMonth(start) ? start : '2026-09' }
+}
+
+export async function saveHistoryStart(month: string) {
+  await (await database()).put('settings', month, 'historyStart')
+  notifyReaders()
 }
 
 export async function saveOpening(openingCents: number, original: number) {

@@ -26,14 +26,62 @@ async function backups(page: Page) {
   await expect(page.getByRole('dialog', { name: 'Copias de seguridad' })).toBeVisible()
 }
 
+async function openSettings(page: Page) {
+  const more = page.getByRole('button', { name: 'Más', exact: true })
+  if (await more.isVisible()) await more.click()
+  await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ajustes' })
+  await expect(dialog).toBeVisible()
+  return dialog
+}
+
+async function setHistoryStart(page: Page, year: string, month: string) {
+  const dialog = await openSettings(page)
+  await dialog.getByLabel('Año', { exact: true }).fill(year)
+  await dialog.getByLabel('Mes', { exact: true }).selectOption(month)
+  await dialog.getByRole('button', { name: 'Guardar mes de inicio' }).click()
+  await expect(dialog).toHaveCount(0)
+}
+
 const signed = (value: string) => value.replace(/\s/g, '')
 async function balance(page: Page, expected: string) {
   await expect.poll(async () => signed(await page.locator('.balance-amount').innerText())).toBe(expected)
 }
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-11-25T12:00:00+01:00') })
   await page.goto('./')
   await expect(page.getByRole('button', { name: 'Nuevo movimiento' })).toBeEnabled()
+})
+
+test('el mes de inicio se puede ampliar, se recuerda y controla los periodos visibles', async ({ page }) => {
+  const settings = await openSettings(page)
+  await expect(settings.getByLabel('Mes', { exact: true })).toHaveValue('01')
+  await settings.getByRole('button', { name: 'Cerrar' }).click()
+  await setHistoryStart(page, '2020', '04')
+  await page.reload()
+  const period = page.getByRole('button', { name: 'Elegir periodo' })
+  await add(page, 'Registro de abril', '20', '2020-04-06')
+  await expect(period).toHaveAttribute('title', 'Abril 2020')
+  await expect(page.getByRole('button', { name: 'Mes anterior' })).toBeDisabled()
+  await period.click()
+  await expect(page.getByRole('button', { name: 'Marzo', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Año anterior' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Cerrar' }).click()
+  await page.getByRole('button', { name: 'Mes siguiente' }).click()
+  await expect(page.getByRole('button', { name: 'Cierre de abril de 2020', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Mes anterior' }).click()
+  await setHistoryStart(page, '2020', '05')
+  await expect(period).toHaveAttribute('title', 'Mayo 2020')
+  await expect(page.getByRole('button', { name: 'Mes anterior' })).toBeDisabled()
+  await expect(page.getByRole('region', { name: 'Saldos de la cuenta' }).locator('strong').last()).toContainText('-20,00')
+  await navigate(page, 'Movimientos')
+  await period.click()
+  await page.getByRole('button', { name: 'Todos los meses', exact: true }).click()
+  const entry = page.getByRole('button', { name: 'Editar Registro de abril' })
+  await expect(entry).toHaveCount(0)
+  await setHistoryStart(page, '2020', '04')
+  await expect(entry).toBeVisible()
 })
 
 test('el selector mantiene su posición con meses largos y cortos en las tres pantallas', async ({ page }, testInfo) => {
@@ -652,6 +700,10 @@ test('actualizar la app conserva la base de datos anterior', async ({ browser, p
     const strip = tab.getByRole('region', { name: 'Saldos de la cuenta' })
     await expect(strip.locator('strong').last()).toContainText('-14,00')
     await expect(strip.locator('strong').first()).toContainText('0,00')
+    const settings = await openSettings(tab)
+    await expect(settings.getByLabel('Año', { exact: true })).toHaveValue('2026')
+    await expect(settings.getByLabel('Mes', { exact: true })).toHaveValue('09')
+    await settings.getByRole('button', { name: 'Cerrar' }).click()
     await navigate(tab, 'Movimientos')
     await tab.getByRole('button', { name: 'Elegir periodo' }).click()
     await tab.getByRole('button', { name: 'Todos los meses', exact: true }).click()
@@ -924,8 +976,9 @@ test('recuperar una copia antigua conserva los recordatorios guardados', async (
 })
 
 test('el cierre aparece al cambiar de mes y se puede volver a ver o abrir su historial', async ({ page }) => {
-  await page.clock.install({ time: new Date('2026-11-30T23:58:00+01:00') })
+  await page.clock.setSystemTime(new Date('2026-11-30T23:58:00+01:00'))
   await page.reload()
+  await setHistoryStart(page, '2026', '09')
   await add(page, 'Gasto de septiembre', '80', '2026-09-10', 'food')
   await add(page, 'Gasto anterior', '100', '2026-10-23', 'food')
   await add(page, 'Mercado', '70', '2026-11-22', 'food')

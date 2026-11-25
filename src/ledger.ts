@@ -2,8 +2,6 @@ import { readReminders, type Reminder } from './reminders.ts'
 
 export type Kind = 'expense' | 'income' | 'withdrawal'
 export type PaymentSource = 'cash' | 'bank'
-export const firstHistoryMonth = '2026-09'
-export const firstHistoryDay = firstHistoryMonth + '-01'
 export interface Refund { id: string, cents: number, date: string, payment: PaymentSource }
 
 export const categories = {
@@ -147,6 +145,10 @@ export function validDay(value: unknown): value is string {
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
   return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1]
+}
+
+export function validMonth(value: unknown): value is string {
+  return typeof value === 'string' && validDay(value + '-01')
 }
 
 export function shiftMonth(month: string, delta: number): string {

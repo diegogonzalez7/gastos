@@ -1,13 +1,14 @@
 import { useId, useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Banknote, Copy, RotateCcw, Trash2 } from 'lucide-react'
-import { calendarDay, categories, categoryIds, displayCategory, firstHistoryDay, MAX_CONCEPT, money, monthLabel, netExpense, newEntryId, parseAmount, paymentSource, refundedCents, validDay, type CategoryId, type Entry, type Kind, type PaymentSource } from '../ledger'
+import { calendarDay, categories, categoryIds, displayCategory, MAX_CONCEPT, money, monthLabel, netExpense, newEntryId, parseAmount, paymentSource, refundedCents, validDay, type CategoryId, type Entry, type Kind, type PaymentSource } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
 import { changeEntry, saveEntry, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
 
 export interface EditorDraft { original?: Entry, copy?: Entry, category?: CategoryId, date: string, favorite?: Favorite, mode?: 'favorite' }
 
-export function Editor({ draft, onClose, onDuplicate, onRefunds, onSaved, onFavorite }: {
+export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds, onSaved, onFavorite }: {
+  firstHistoryDay: string,
   draft: EditorDraft, onClose: () => void, onDuplicate: (entry: Entry) => void, onSaved: (date: string | null, message: string) => void,
   onFavorite: (id: string, favorite: Favorite | null) => void,
   onRefunds: (entry: Entry) => void,
@@ -69,7 +70,7 @@ export function Editor({ draft, onClose, onDuplicate, onRefunds, onSaved, onFavo
     if (!cents) { setError('Introduce un importe entre 0,01 € y 999.999.999,99 €, con un máximo de dos decimales.'); return }
     if (cents < alreadyRefunded) { setError(`El gasto debe cubrir los ${money(alreadyRefunded)} ya reembolsados.`); return }
     if (!editingFavorite && !validDay(date)) { setError('Elige una fecha válida.'); return }
-    if (!editingFavorite && date < firstHistoryDay) { setError('El historial empieza en septiembre de 2026.'); return }
+    if (!editingFavorite && date < firstHistoryDay) { setError(`El historial empieza en ${monthLabel(firstHistoryDay.slice(0, 7)).toLocaleLowerCase('es')}.`); return }
     setBusy(true)
     setError('')
     try {

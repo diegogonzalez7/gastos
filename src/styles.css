@@ -242,6 +242,7 @@ input::placeholder { color: var(--muted); opacity: .85; }
 .sheet-heading h2 { font-size: 23px; letter-spacing: -.04em; }
 .sheet-close { border-radius: 50%; background: var(--surface-soft); flex-shrink: 0; }
 .entry-form, .backup-options { display: grid; gap: 16px; }
+.history-settings-fields { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 10px; }
 .kind-switch { width: 100%; }
 .kind-switch button { min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; }
 .movement-kind button { padding-inline: 4px; }
