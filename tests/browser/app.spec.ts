@@ -1261,3 +1261,46 @@ test('los diseños se pueden previsualizar, se recuerdan y conservan el modo del
   await picker.getByRole('button', { name: 'Cerrar' }).click()
   await expect(page.getByRole('button', { name: 'Editar Máquina Trabajo · Café del día' })).toBeVisible()
 })
+
+test('la colección One Piece muestra los cuatro paisajes y conserva el elegido sin conexión', async ({ page, context }) => {
+  const appearance = await openAppearance(page)
+  await appearance.getByRole('button', { name: 'Elegir diseño' }).click()
+  const picker = page.getByRole('dialog', { name: 'Diseños de Mi Dinero' })
+  const collection = picker.getByRole('region', { name: 'One Piece' })
+  const root = page.locator('html')
+  const landscape = page.locator('.hero-landscape')
+  await expect(collection.getByRole('button')).toHaveCount(4)
+
+  for (const [name, id, motion] of [
+    ['Raíces de Elbaph', 'elbaph', 'landscape-drift'],
+    ['Luna libre', 'luna', 'landscape-shimmer'],
+    ['Rumbo al alba', 'alba', 'landscape-shimmer'],
+    ['Faroles de Wano', 'wano', 'landscape-drift'],
+  ]) {
+    const option = collection.getByRole('button', { name, exact: true })
+    await option.click()
+    await expect(option).toHaveAttribute('aria-pressed', 'true')
+    await expect(root).toHaveAttribute('data-design', 'one-piece-' + id)
+    await expect(landscape).toHaveCSS('background-image', new RegExp(id + '-.*\\.webp'))
+    await expect(landscape.locator('i').first()).toHaveCSS('animation-name', motion)
+  }
+
+  await picker.getByRole('button', { name: 'Cerrar' }).click()
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
+  await context.setOffline(true)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.reload()
+  await expect(root).toHaveAttribute('data-design', 'one-piece-wano')
+  await expect(page.locator('.hero-landscape-motion')).toBeHidden()
+  await balance(page, '0,00€')
+  const picture = await landscape.evaluate(async element => {
+    const url = getComputedStyle(element).backgroundImage.match(/url\("([^"]+)"\)/)?.[1]
+    if (!url) return 0
+    const image = new Image()
+    image.src = url
+    await image.decode()
+    return image.naturalWidth
+  })
+  expect(picture).toBeGreaterThan(0)
+})

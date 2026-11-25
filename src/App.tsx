@@ -272,7 +272,7 @@ export default function App() {
           : loadState === 'ready' && <div key={page} className="page-content">
             {page === 'resumen' ? <>
               {reportLinkMonth && <div className="monthly-story-entry"><MonthlyStoryLink month={reportLinkMonth} unread={unreadReport} onClick={openMonthlyStory} /></div>}
-              <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={entries} month={month} firstHistoryDay={firstHistoryDay}
+              <Dashboard design={design} account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={entries} month={month} firstHistoryDay={firstHistoryDay}
                 totals={totals} onAdd={add} onEdit={edit} onEditRefund={openRefunds}
                 favorites={favorites} onUseFavorite={favorite => setEditor({ date: calendarDay(), favorite })}
                 onManageFavorites={() => favorites.length ? setUtility('favorites') : editFavorite()}

@@ -35,7 +35,7 @@
       try {
         var choice = localStorage.getItem('mi-dinero:theme')
         var design = localStorage.getItem('mi-dinero:design')
-        var custom = ['midnight', 'graphite', 'plum', 'sand'].includes(design)
+        var custom = ['midnight', 'graphite', 'plum', 'sand', 'one-piece-elbaph', 'one-piece-luna', 'one-piece-alba', 'one-piece-wano'].includes(design)
         if (custom) document.documentElement.dataset.design = design
         var dark = custom ? design !== 'sand' : choice === 'dark' || (choice !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
         document.documentElement.dataset.theme = dark ? 'dark' : 'light'
