@@ -1262,13 +1262,13 @@ test('los diseños se pueden previsualizar, se recuerdan y conservan el modo del
   await expect(page.getByRole('button', { name: 'Editar Máquina Trabajo · Café del día' })).toBeVisible()
 })
 
-test('la colección One Piece muestra los cuatro paisajes y conserva el elegido sin conexión', async ({ page, context }) => {
+test('la colección One Piece mantiene el paisaje en todas las pantallas y sin conexión', async ({ page, context }) => {
   const appearance = await openAppearance(page)
   await appearance.getByRole('button', { name: 'Elegir diseño' }).click()
   const picker = page.getByRole('dialog', { name: 'Diseños de Mi Dinero' })
   const collection = picker.getByRole('region', { name: 'One Piece' })
   const root = page.locator('html')
-  const landscape = page.locator('.hero-landscape')
+  const landscape = page.locator('.app-shell > .app-landscape')
   await expect(collection.getByRole('button')).toHaveCount(4)
 
   for (const [name, id, motion] of [
@@ -1286,6 +1286,15 @@ test('la colección One Piece muestra los cuatro paisajes y conserva el elegido 
   }
 
   await picker.getByRole('button', { name: 'Cerrar' }).click()
+  await expect(landscape).toHaveCSS('position', 'fixed')
+  await expect(page.getByRole('region', { name: 'Resumen financiero del mes' })).toHaveCSS('background-image', 'none')
+  const fullScreen = await landscape.boundingBox()
+  expect(fullScreen).toMatchObject({ x: 0, y: 0, ...page.viewportSize() })
+  for (const tab of ['Movimientos', 'Categorías', 'Resumen']) {
+    await navigate(page, tab)
+    await expect(landscape).toHaveCSS('background-image', /wano-.*\.webp/)
+    expect(await landscape.boundingBox()).toEqual(fullScreen)
+  }
   await page.evaluate(() => navigator.serviceWorker.ready)
   await page.reload()
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
@@ -1293,7 +1302,7 @@ test('la colección One Piece muestra los cuatro paisajes y conserva el elegido 
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.reload()
   await expect(root).toHaveAttribute('data-design', 'one-piece-wano')
-  await expect(page.locator('.hero-landscape-motion')).toBeHidden()
+  await expect(page.locator('.app-landscape-motion')).toBeHidden()
   await balance(page, '0,00€')
   const picture = await landscape.evaluate(async element => {
     const url = getComputedStyle(element).backgroundImage.match(/url\("([^"]+)"\)/)?.[1]

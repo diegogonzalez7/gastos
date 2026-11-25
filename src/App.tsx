@@ -22,7 +22,7 @@ import { MonthlyStory, MonthlyStoryLink } from './components/MonthlyStory'
 import { monthlyReport } from './monthlyReport'
 import type { Reminder } from './reminders'
 import { DesignPicker } from './components/DesignPicker'
-import { cacheAppearance, designLabel, savedDesign, savedTheme, type Design, type Theme } from './appearance'
+import { cacheAppearance, designLabel, hasLandscape, savedDesign, savedTheme, type Design, type Theme } from './appearance'
 
 const pages = {
   resumen: { label: 'Resumen', icon: LayoutDashboard },
@@ -249,6 +249,9 @@ export default function App() {
   </button>
 
   return <div className="app-shell" inert={loadState === 'loading'}>
+    {hasLandscape(design) && <div className="app-landscape" aria-hidden="true">
+      <div className="app-landscape-motion"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+    </div>}
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>Saltar al contenido</a>
     <aside className="sidebar">
       <a href="#resumen" className="brand-link" aria-label="Mi Dinero, resumen"><Brand /></a>
@@ -272,7 +275,7 @@ export default function App() {
           : loadState === 'ready' && <div key={page} className="page-content">
             {page === 'resumen' ? <>
               {reportLinkMonth && <div className="monthly-story-entry"><MonthlyStoryLink month={reportLinkMonth} unread={unreadReport} onClick={openMonthlyStory} /></div>}
-              <Dashboard design={design} account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={entries} month={month} firstHistoryDay={firstHistoryDay}
+              <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={entries} month={month} firstHistoryDay={firstHistoryDay}
                 totals={totals} onAdd={add} onEdit={edit} onEditRefund={openRefunds}
                 favorites={favorites} onUseFavorite={favorite => setEditor({ date: calendarDay(), favorite })}
                 onManageFavorites={() => favorites.length ? setUtility('favorites') : editFavorite()}

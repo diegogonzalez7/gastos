@@ -92,7 +92,7 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 
 ## Diseños de la interfaz
 
-- [x] Colección One Piece con cuatro paisajes animados, miniaturas en Apariencia y soporte para movimiento reducido.
+- [x] Colección One Piece con cuatro fondos animados en toda la app, miniaturas en Apariencia y soporte para movimiento reducido.
 
 - El selector de Apariencia ofrece Original, Medianoche, Grafito, Ciruela y Arena, con una vista previa de cada diseño.
 - La elección se guarda en el dispositivo y se aplica desde el arranque. Original conserva el ajuste de color del sistema, claro u oscuro que se usaba antes.

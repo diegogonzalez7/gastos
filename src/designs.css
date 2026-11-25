@@ -403,31 +403,71 @@
 .design-collection .design-option-check { top: 14px; bottom: auto; padding: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--canvas); }
 .design-collection .design-option-label { padding-inline-end: 3px; }
 
-.balance-card.balance-landscape {
-  --landscape-height: clamp(210px, 48vw, 360px);
-  display: block;
-  padding-top: calc(var(--landscape-height) - 37px);
-  border-radius: var(--design-radius);
+/* The scene sits behind the entire shell and stays in place as the pages scroll. */
+:root[data-design^="one-piece-"] .app-shell {
+  isolation: isolate;
+  --landscape-glass: color-mix(in srgb, var(--surface) 84%, transparent);
+  --landscape-shade: color-mix(in srgb, var(--canvas) 78%, transparent);
 }
-.balance-landscape .balance-content { width: 100%; }
-.balance-landscape .balance-amount { max-width: 100%; }
-.balance-landscape .balance-metrics {
-  border-top: 1px solid var(--design-hero-line);
-  width: 100%;
-  padding-top: 13px;
-}
-.hero-landscape {
-  position: absolute;
+
+.app-landscape {
+  position: fixed;
   z-index: -1;
-  inset: 0 0 auto;
-  height: calc(var(--landscape-height) + 53px);
+  inset: 0;
   overflow: hidden;
+  pointer-events: none;
   background:
-    linear-gradient(to bottom, transparent 48%, color-mix(in srgb, var(--surface) 66%, transparent) 70%, var(--surface) 99%),
+    linear-gradient(to bottom, var(--landscape-shade), transparent 38%, var(--landscape-shade) 80%, var(--canvas)),
+    linear-gradient(90deg, var(--landscape-shade), transparent),
     var(--landscape-image) var(--landscape-position) / cover;
 }
-.hero-landscape-motion { position: absolute; inset: 4% 0 24%; }
-.hero-landscape-motion i {
+.app-landscape-motion { position: absolute; inset: 4% 3% 36%; }
+
+:root[data-design^="one-piece-"] :is(.sidebar, .mobile-top, .mobile-nav) {
+  background: color-mix(in srgb, var(--canvas) 70%, transparent);
+  backdrop-filter: blur(10px);
+}
+:root[data-design^="one-piece-"] :is(.panel, .balance-metrics, .quick-button, .month-control) {
+  background: var(--landscape-glass);
+}
+:root[data-design^="one-piece-"] :is(.page-header, .quick-heading, .monthly-story-entry) {
+  text-shadow: 0 1px 6px var(--canvas), 0 1px 14px var(--canvas);
+}
+:root[data-design^="one-piece-"] .page-header p { color: var(--secondary); }
+:root[data-design^="one-piece-"] .balance-card {
+  min-height: 0;
+  padding: clamp(122px, 23svh, 220px) 0 0;
+  overflow: visible;
+  background: transparent;
+}
+:root[data-design^="one-piece-"] .balance-content { width: 100%; }
+:root[data-design^="one-piece-"] :is(.balance-label, .balance-amount) {
+  color: var(--design-hero-text);
+  text-shadow: 0 1px 8px var(--canvas), 0 2px 16px var(--canvas);
+}
+:root[data-design^="one-piece-"] .balance-amount { max-width: 100%; }
+:root[data-design^="one-piece-"] :is(.hero-wallet, .hero-pattern) { display: none; }
+:root[data-design^="one-piece-"] .balance-metrics {
+  width: 100%;
+  border: 1px solid var(--design-hero-line);
+  border-radius: var(--design-radius);
+  padding: 13px 16px;
+}
+:root[data-design^="one-piece-"] .hero-metric { flex: 1; }
+
+@media (max-width: 760px) {
+  .app-landscape {
+    --landscape-height: clamp(400px, 123vw, 580px);
+    background:
+      linear-gradient(to bottom, var(--landscape-shade), transparent 40%, var(--landscape-shade) 78%, var(--canvas))
+        center top / 100% var(--landscape-height) no-repeat,
+      var(--landscape-image) var(--landscape-position) / auto var(--landscape-height) no-repeat var(--canvas);
+    background-position-y: top;
+  }
+  :root[data-design^="one-piece-"] .mobile-top { background: color-mix(in srgb, var(--canvas) 56%, transparent); }
+  .app-landscape-motion { inset-block-end: 43%; }
+}
+.app-landscape-motion i {
   position: absolute;
   left: var(--x);
   top: var(--y);
@@ -438,16 +478,16 @@
   opacity: 0;
   animation: var(--particle-animation) var(--duration) var(--delay) infinite linear;
 }
-.hero-landscape-motion i:nth-child(1) { --x: 14%; --y: 15%; --duration: 10s; --delay: -2s; }
-.hero-landscape-motion i:nth-child(2) { --x: 29%; --y: 40%; --duration: 13s; --delay: -6s; }
-.hero-landscape-motion i:nth-child(3) { --x: 43%; --y: 24%; --duration: 11s; --delay: -7s; }
-.hero-landscape-motion i:nth-child(4) { --x: 58%; --y: 49%; --duration: 10s; --delay: -4s; }
-.hero-landscape-motion i:nth-child(5) { --x: 70%; --y: 11%; --duration: 12s; --delay: -5s; }
-.hero-landscape-motion i:nth-child(6) { --x: 87%; --y: 37%; --duration: 13s; --delay: -8s; }
-.hero-landscape-motion i:nth-child(7) { --x: 77%; --y: 61%; --duration: 11s; --delay: -3s; }
-.hero-landscape-motion i:nth-child(8) { --x: 16%; --y: 66%; --duration: 14s; --delay: -9s; }
-:root[data-design="one-piece-alba"] .hero-landscape-motion { inset-block: 58% 20%; }
-:root[data-design="one-piece-luna"] .hero-landscape-motion { inset-block-end: 43%; }
+.app-landscape-motion i:nth-child(1) { --x: 14%; --y: 15%; --duration: 10s; --delay: -2s; }
+.app-landscape-motion i:nth-child(2) { --x: 29%; --y: 40%; --duration: 13s; --delay: -6s; }
+.app-landscape-motion i:nth-child(3) { --x: 43%; --y: 24%; --duration: 11s; --delay: -7s; }
+.app-landscape-motion i:nth-child(4) { --x: 58%; --y: 49%; --duration: 10s; --delay: -4s; }
+.app-landscape-motion i:nth-child(5) { --x: 70%; --y: 11%; --duration: 12s; --delay: -5s; }
+.app-landscape-motion i:nth-child(6) { --x: 87%; --y: 37%; --duration: 13s; --delay: -8s; }
+.app-landscape-motion i:nth-child(7) { --x: 77%; --y: 61%; --duration: 11s; --delay: -3s; }
+.app-landscape-motion i:nth-child(8) { --x: 16%; --y: 66%; --duration: 14s; --delay: -9s; }
+:root[data-design="one-piece-alba"] .app-landscape-motion { inset-block: 58% 20%; }
+:root[data-design="one-piece-luna"] .app-landscape-motion { inset-block-end: 43%; }
 @keyframes landscape-drift {
   0% { opacity: 0; transform: translate(0, 0) rotate(0); }
   25%, 70% { opacity: .7; }
@@ -458,5 +498,5 @@
   50% { opacity: .78; transform: translateX(5px) scaleX(1.2); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero-landscape-motion { display: none; }
+  .app-landscape-motion { display: none; }
 }

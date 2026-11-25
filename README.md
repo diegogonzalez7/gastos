@@ -33,7 +33,7 @@ Abre la dirección que muestra Vite en la terminal. Para probar la interfaz desd
 
 En el móvil, abre **Ajustes** desde **Más**. En el ordenador, está en la barra lateral. Dentro de **Apariencia → Diseños** puedes usar **Original**, **Medianoche**, **Grafito**, **Ciruela** o **Arena**. Medianoche, Grafito y Ciruela tienen fondo oscuro. Arena usa tonos crema. La elección se guarda en cada dispositivo y al volver a Original se recupera el modo de color que tenías seleccionado allí.
 
-El mismo selector incluye la colección **One Piece** con cuatro diseños oscuros. **Raíces de Elbaph**, **Luna libre**, **Rumbo al alba** y **Faroles de Wano** visten el balance del mes con paisajes ilustrados. Los efectos respetan la preferencia de movimiento reducido del dispositivo.
+El mismo selector incluye la colección **One Piece** con cuatro diseños oscuros. **Raíces de Elbaph**, **Luna libre**, **Rumbo al alba** y **Faroles de Wano** aplican un paisaje de fondo a toda la app. Los efectos respetan la preferencia de movimiento reducido del dispositivo.
 
 ## Copias de seguridad
 

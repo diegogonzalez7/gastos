@@ -7,7 +7,6 @@ import {
   type CategoryId, type Entry, type Kind, type PaymentSource, type Refund, type Summary,
 } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
-import { hasLandscape, type Design } from '../appearance'
 import { CategoryBadge, EmptyState, FittedAmount, Modal } from './ui'
 
 export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, onEdit: (entry: Entry) => void, showDate?: boolean }) {
@@ -59,15 +58,10 @@ function MovementRow({ movement: { entry, refund }, onEdit, onEditRefund, showDa
   </button>
 }
 
-function Balance({ totals, design }: { totals: Summary, design: Design }) {
-  const landscape = hasLandscape(design)
-  return <section className={landscape ? 'balance-card balance-landscape' : 'balance-card'} aria-label="Resumen financiero del mes">
-    {landscape ? <div className="hero-landscape" aria-hidden="true">
-      <div className="hero-landscape-motion"><i /><i /><i /><i /><i /><i /><i /><i /></div>
-    </div> : <>
-      <div className="hero-pattern" aria-hidden="true" />
-      <img className="hero-wallet" src={import.meta.env.BASE_URL + 'cartera.webp'} alt="" />
-    </>}
+function Balance({ totals }: { totals: Summary }) {
+  return <section className="balance-card" aria-label="Resumen financiero del mes">
+    <div className="hero-pattern" aria-hidden="true" />
+    <img className="hero-wallet" src={import.meta.env.BASE_URL + 'cartera.webp'} alt="" />
     <div className="balance-content">
       <div className="balance-label"><Wallet size={17} />Balance del mes</div>
       <FittedAmount cents={totals.balance} className="balance-amount" />
@@ -128,7 +122,6 @@ function SpendingRing({ totals }: { totals: Summary }) {
 }
 
 interface DashboardProps {
-  design: Design
   account: { closing: number, total: number }
   openingCents: number
   onOpening: () => void
@@ -146,10 +139,10 @@ interface DashboardProps {
   onManageFavorites: () => void
 }
 
-export function Dashboard({ design, account, openingCents, onOpening, totals, entries, month, firstHistoryDay, onAdd, onEdit, onEditRefund, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
+export function Dashboard({ account, openingCents, onOpening, totals, entries, month, firstHistoryDay, onAdd, onEdit, onEditRefund, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
   const recent = movementRows(entries, month, firstHistoryDay).slice(0, 5)
   return <div className="view-stack">
-    <Balance totals={totals} design={design} />
+    <Balance totals={totals} />
     <section className="panel account-strip" aria-label="Saldos de la cuenta">
       <button onClick={onOpening} aria-label="Editar saldo inicial"><small>Saldo inicial del banco</small><strong className="money">{money(openingCents)} <ChevronRight size={14} /></strong></button>
       <div><small>Saldo bancario al cierre</small><strong className="money">{money(account.closing)}</strong></div>
