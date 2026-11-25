@@ -34,6 +34,8 @@
   --button: #a9e1c3;
   --button-hover: #c0edd4;
   --button-text: #10271e;
+  --story-more: #ffc1a9;
+  --story-less: #a2eac3;
 }
 .dialog.story-dialog .sheet {
   background: #12241f;
@@ -44,8 +46,14 @@
 .story-dialog .sheet-close { color: #d3e5db; }
 .story-dialog .sheet-handle { display: none; }
 
+.story-playback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .story-progress {
   display: flex;
+  flex: 1;
   gap: 5px;
 }
 .story-progress button {
@@ -56,21 +64,23 @@
   display: grid;
   align-items: center;
 }
-.story-progress button::before {
-  content: "";
+.story-progress button::before, .story-progress-fill {
+  grid-area: 1 / 1;
   height: 3px;
   border-radius: 8px;
-  background: #486256;
-  transition: background .2s ease-out;
 }
-.story-progress .filled::before { background: #a2dabc; }
-.story-progress button[aria-current]::before { background: #e4ffef; }
+.story-progress button::before { content: ""; background: #486256; }
+.story-progress-fill { background: #a2dabc; transform: scaleX(0); transform-origin: left; }
+.story-progress .filled .story-progress-fill { transform: scaleX(1); }
+.story-progress button[aria-current] .story-progress-fill { background: #e4ffef; }
+.story-pause { flex: none; }
 
 .story-stage {
   overflow: hidden;
   border-radius: 18px;
   background: #182f26;
   touch-action: pan-y pinch-zoom;
+  cursor: pointer;
 }
 .story-scene {
   --story-color: 107 211 163;
@@ -129,6 +139,8 @@
 .story-detail, .story-caption { color: #c8dbd0; font-size: 14px; }
 .story-caption { border-top: 1px solid rgb(var(--story-color) / .26); padding-top: 10px; }
 .story-highlight { font-size: 20px; font-weight: 630; overflow-wrap: anywhere; }
+.story-highlight[data-spending="más"] { color: var(--story-more); }
+.story-highlight[data-spending="menos"] { color: var(--story-less); }
 
 .story-metrics {
   display: grid;
@@ -181,6 +193,7 @@
 }
 .story-actions { display: flex; gap: 8px; margin-top: 14px; }
 .story-actions .primary { flex: 1; }
+.story-home { flex: 1; }
 .story-back.secondary { padding-inline: 12px; }
 
 @keyframes story-enter {
@@ -205,9 +218,9 @@
   }
   .story-stage { flex: 1 0 auto; display: grid; }
   .story-scene { min-height: 325px; }
-  .story-progress, .story-actions { flex: none; }
+  .story-playback, .story-actions { flex: none; }
+  .story-actions button { padding-inline: 9px; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .story-dialog[open], .story-scene, .story-scene-content, .story-bar i { animation: none; }
-  .story-progress button::before { transition: none; }
 }

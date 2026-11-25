@@ -4,7 +4,7 @@ import {
   List, MonitorSmartphone, Moon, Palette, PieChart, Plus, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
-  accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
+  accountBalances, calendarDay, capitalize, dateLabel, firstHistoryMonth, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
 } from './ledger'
 import { readLedger, storageMessage, watchEntries } from './storage'
 import { Brand, Modal } from './components/ui'
@@ -62,7 +62,7 @@ function ThemeControl({ theme, onChange }: { theme: Theme, onChange: (theme: The
 export default function App() {
   const [today, setToday] = useState(calendarDay)
   const [page, setPage] = useState<Page>(pageFromHash)
-  const [month, setMonth] = useState(today.slice(0, 7))
+  const [month, setMonth] = useState(() => today.slice(0, 7) < firstHistoryMonth ? firstHistoryMonth : today.slice(0, 7))
   const [allMonths, setAllMonths] = useState(false)
   const [category, setCategory] = useState<CategoryId | null>(null)
   const [theme, setTheme] = useState<Theme>(savedTheme)
@@ -106,9 +106,17 @@ export default function App() {
   }, [])
   useEffect(() => {
     let timer: number
+    let localMonth = calendarDay().slice(0, 7)
     function refreshDay() {
       const now = new Date()
-      setToday(calendarDay(now))
+      const day = calendarDay(now)
+      const nextMonth = day.slice(0, 7)
+      if (nextMonth !== localMonth) {
+        const previous = localMonth
+        localMonth = nextMonth
+        setMonth(selected => selected === previous && nextMonth >= firstHistoryMonth ? nextMonth : selected)
+      }
+      setToday(day)
       const midnight = new Date(now)
       midnight.setHours(24, 0, 0, 0)
       window.clearTimeout(timer)
@@ -158,7 +166,8 @@ export default function App() {
   const account = useMemo(() => accountBalances({ entries, openingCents }, month), [entries, openingCents, month])
   const currentMonth = today.slice(0, 7)
   const lastClosedMonth = shiftMonth(currentMonth, -1)
-  const reportLinkMonth = month < currentMonth ? month : lastClosedMonth
+  const previousMonth = shiftMonth(month, -1)
+  const reportLinkMonth = previousMonth >= firstHistoryMonth && previousMonth < currentMonth ? previousMonth : null
   const unreadReport = reportLinkMonth === lastClosedMonth && seenReport !== lastClosedMonth &&
     entries.some(entry => entry.date.startsWith(lastClosedMonth) || entry.refunds?.some(refund => refund.date.startsWith(lastClosedMonth)))
   const report = useMemo(() => storyMonth ? monthlyReport(entries, openingCents, storyMonth) : null, [entries, openingCents, storyMonth])
@@ -207,6 +216,7 @@ export default function App() {
     notify(message)
   }
   function openMonthlyStory() {
+    if (!reportLinkMonth) return
     if (unreadReport) {
       setSeenReport(reportLinkMonth)
       try { localStorage.setItem(seenReportKey, reportLinkMonth) } catch { /* The story still opens. */ }
@@ -255,7 +265,7 @@ export default function App() {
           ? <div className="storage-error" role="alert"><CircleAlert size={23} /><p>{loadError}</p><button className="secondary" onClick={reload}>Reintentar</button></div>
           : loadState === 'ready' && <div key={page} className="page-content">
             {page === 'resumen' ? <>
-              <div className="monthly-story-entry"><MonthlyStoryLink month={reportLinkMonth} unread={unreadReport} onClick={openMonthlyStory} /></div>
+              {reportLinkMonth && <div className="monthly-story-entry"><MonthlyStoryLink month={reportLinkMonth} unread={unreadReport} onClick={openMonthlyStory} /></div>}
               <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={entries} month={month}
                 totals={totals} onAdd={add} onEdit={edit} onEditRefund={openRefunds}
                 favorites={favorites} onUseFavorite={favorite => setEditor({ date: calendarDay(), favorite })}
@@ -280,7 +290,8 @@ export default function App() {
     }} onSaved={message => { setRefundDialog(null); void reload(); notify(message) }} />}
     {utility === 'favorites' && <FavoriteManager favorites={favorites} onEdit={editFavorite} onClose={() => setUtility(null)} />}
     {report && <MonthlyStory key={report.month} report={report} onClose={() => setStoryMonth(null)}
-      onHistory={() => { setStoryMonth(null); setMonth(report.month); showHistory() }} />}
+      onHistory={() => { setStoryMonth(null); setMonth(report.month); showHistory() }}
+      onHome={() => { setStoryMonth(null); setMonth(currentMonth); goTo('resumen') }} />}
     {utility === 'more' && <Modal title="Más opciones" onClose={() => setUtility(null)}>
       <button className="more-backup more-reminders" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={20} />Recordatorios<ChevronRight size={17} /></button>
       <button className="more-backup more-reminders" onClick={() => setUtility('monthly-alert')}><CalendarClock size={20} />Aviso del cierre mensual<ChevronRight size={17} /></button>

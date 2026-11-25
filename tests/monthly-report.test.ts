@@ -35,6 +35,15 @@ test('un mes vacío no inventa gastos y mantiene su saldo acumulado', () => {
   assert.equal(report.closing, 379500)
 })
 
+test('septiembre abre el historial visible y una comparación puede partir de cero', () => {
+  const august = { ...expense, date: '2026-08-31' }
+  const september = monthlyReport([august], 0, '2026-09')
+  assert.equal(september.previous, null)
+  assert.equal(september.closing, -9000)
+  const october = monthlyReport(entries, 0, '2026-10')
+  assert.deepEqual(october.previous, { month: '2026-09', expense: 0 })
+})
+
 test('el aviso de calendario se repite el día 1 a las 09:00 también al cambiar de año', () => {
   const now = new Date(2026, 11, 31, 23, 59)
   assert.deepEqual(nextMonthlyAlert(now), new Date(2027, 0, 1, 9))

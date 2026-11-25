@@ -1,5 +1,5 @@
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, CirclePlay, Wallet } from 'lucide-react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, CirclePlay, House, Pause, Play, Wallet } from 'lucide-react'
 import { categories, dateLabel, displayCategory, money, monthLabel, netExpense, percent } from '../ledger'
 import type { MonthlyReport } from '../monthlyReport'
 import { CategoryBadge, FittedAmount, Modal } from './ui'
@@ -20,6 +20,9 @@ interface StorySlide {
   tone: string
   content: ReactNode
 }
+
+const slideDuration = 30_000
+const comparisonPercent = new Intl.NumberFormat('es-ES', { style: 'percent', maximumFractionDigits: 1 })
 
 function storySlides({ month, totals, closing, movementCount, expenseCount, spendingDays, largestExpense, previous }: MonthlyReport): StorySlide[] {
   const top = totals.breakdown[0]
@@ -72,16 +75,20 @@ function storySlides({ month, totals, closing, movementCount, expenseCount, spen
     })
   }
 
-  if (movementCount > 0 && previous) {
+  if (previous) {
     const difference = totals.expense - previous.expense
+    const rate = previous.expense > 0 ? Math.abs(difference) / previous.expense : null
+    const change = difference > 0 ? 'más' : 'menos'
     slides.push({
       title: 'Frente al mes anterior', tone: 'comparison',
       content: <>
         {difference === 0 ? <p className="story-highlight">Gastaste lo mismo</p> : <>
+          <p className="story-highlight" data-spending={change}>Gastaste {change}</p>
           <FittedAmount cents={Math.abs(difference)} className="story-amount" />
-          <p className="story-highlight">{difference > 0 ? 'Más de gasto' : 'Menos de gasto'}</p>
+          {rate !== null && <p className="story-highlight" data-spending={change}>{rate < .001 ? '<0,1 %' : comparisonPercent.format(rate)} {change}</p>}
         </>}
-        <p className="story-detail">En {monthLabel(previous.month).toLocaleLowerCase('es')} gastaste <strong className="money">{money(previous.expense)}</strong>.</p>
+        {previous.expense > 0 ? <p className="story-detail">En {monthLabel(previous.month).toLocaleLowerCase('es')} gastaste <strong className="money">{money(previous.expense)}</strong>.</p>
+          : <p className="story-detail">En {monthLabel(previous.month).toLocaleLowerCase('es')} no registraste gastos.</p>}
       </>,
     })
   }
@@ -98,15 +105,50 @@ function storySlides({ month, totals, closing, movementCount, expenseCount, spen
   return slides
 }
 
-export function MonthlyStory({ report, onClose, onHistory }: {
-  report: MonthlyReport, onClose: () => void, onHistory: () => void,
+export function MonthlyStory({ report, onClose, onHistory, onHome }: {
+  report: MonthlyReport, onClose: () => void, onHistory: () => void, onHome: () => void,
 }) {
   const [position, setPosition] = useState({ index: 0, direction: 'forward' })
-  const touch = useRef<{ x: number, y: number } | null>(null)
+  const [paused, setPaused] = useState(false)
+  const pointer = useRef<{ x: number, y: number, id: number } | null>(null)
+  const progress = useRef<HTMLSpanElement>(null)
+  const playback = useRef({ index: -1, elapsed: 0 })
   const slides = storySlides(report)
   const index = Math.min(position.index, slides.length - 1)
   const slide = slides[index]
   const last = index === slides.length - 1
+
+  useEffect(() => {
+    if (playback.current.index !== index) playback.current = { index, elapsed: 0 }
+    const bar = progress.current
+    if (!bar) return
+    let frame = 0
+    let previous = performance.now()
+    const draw = () => {
+      const fraction = Math.min(playback.current.elapsed / slideDuration, 1)
+      bar.style.transform = `scaleX(${fraction})`
+      return fraction
+    }
+    function tick(now: number) {
+      playback.current.elapsed += Math.max(0, now - previous)
+      previous = now
+      if (draw() < 1) frame = requestAnimationFrame(tick)
+      else if (!last) setPosition({ index: index + 1, direction: 'forward' })
+    }
+    function syncVisibility() {
+      cancelAnimationFrame(frame)
+      previous = performance.now()
+      if (!document.hidden && playback.current.elapsed < slideDuration) frame = requestAnimationFrame(tick)
+    }
+    draw()
+    if (paused) return
+    syncVisibility()
+    document.addEventListener('visibilitychange', syncVisibility)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', syncVisibility)
+    }
+  }, [index, last, paused])
 
   function go(next: number) {
     if (next >= 0 && next < slides.length && next !== index) {
@@ -120,20 +162,33 @@ export function MonthlyStory({ report, onClose, onHistory }: {
       go(index + (event.key === 'ArrowRight' ? 1 : -1))
     }
   }}>
-    <div className="story-progress" role="group" aria-label="Páginas del resumen">
-      {slides.map((item, step) => <button key={item.tone} type="button" aria-label={item.title}
-        aria-current={step === index ? 'step' : undefined} onClick={() => go(step)} className={step <= index ? 'filled' : ''} />)}
+    <div className="story-playback">
+      <div className="story-progress" role="group" aria-label="Páginas del resumen">
+        {slides.map((item, step) => <button key={item.tone} type="button" aria-label={item.title}
+          aria-current={step === index ? 'step' : undefined} onClick={() => go(step)} className={step < index ? 'filled' : ''}>
+          <span key={step === index ? 'active' : 'inactive'} ref={step === index ? progress : undefined}
+            className="story-progress-fill" aria-hidden="true" />
+        </button>)}
+      </div>
+      <button className="icon-button story-pause" type="button" aria-label={paused ? 'Reanudar historia' : 'Pausar historia'} onClick={() => setPaused(value => !value)}>
+        {paused ? <Play size={17} /> : <Pause size={17} />}
+      </button>
     </div>
     <div className="story-stage" aria-live="polite" aria-atomic="true"
-      onPointerDown={event => { if (event.pointerType === 'touch') touch.current = { x: event.clientX, y: event.clientY } }}
+      onPointerDown={event => { if (event.button === 0) pointer.current = { x: event.clientX, y: event.clientY, id: event.pointerId } }}
       onPointerUp={event => {
-        const start = touch.current
-        touch.current = null
-        if (!start || event.pointerType !== 'touch') return
-        const distance = event.clientX - start.x
-        if (Math.abs(distance) > 45 && Math.abs(distance) > Math.abs(event.clientY - start.y)) go(index + (distance < 0 ? 1 : -1))
+        const start = pointer.current
+        pointer.current = null
+        if (!start || start.id !== event.pointerId) return
+        const dx = event.clientX - start.x
+        const dy = Math.abs(event.clientY - start.y)
+        if (Math.abs(dx) > 45 && Math.abs(dx) > dy) go(index + (dx < 0 ? 1 : -1))
+        else if (Math.abs(dx) < 12 && dy < 12) {
+          const { left, width } = event.currentTarget.getBoundingClientRect()
+          go(index + (event.clientX < left + width / 3 ? -1 : 1))
+        }
       }}
-      onPointerCancel={() => { touch.current = null }}>
+      onPointerCancel={() => { pointer.current = null }}>
       <article key={slide.tone} className={'story-scene story-' + slide.tone} data-direction={position.direction}>
         <div className="story-scene-content">
           {slide.tone === 'balance' && <img className="story-wallet-image" src={import.meta.env.BASE_URL + 'cartera.webp'} alt="" />}
@@ -145,7 +200,10 @@ export function MonthlyStory({ report, onClose, onHistory }: {
     </div>
     <div className="story-actions">
       <button className="secondary story-back" aria-label="Historia anterior" disabled={index === 0} onClick={() => go(index - 1)}><ChevronLeft size={20} /></button>
-      {last ? <button className="primary" onClick={onHistory}>Ver movimientos<ArrowRight size={17} /></button>
+      {last ? <>
+        <button className="secondary story-home" onClick={onHome}><House size={17} />Volver al inicio</button>
+        <button className="primary" onClick={onHistory}>Ver movimientos<ArrowRight size={17} /></button>
+      </>
         : <button className="primary" onClick={() => go(index + 1)}>Siguiente<ChevronRight size={20} /></button>}
     </div>
   </Modal>

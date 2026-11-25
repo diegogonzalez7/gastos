@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
-import { calendarDay, categories, dateLabel, displayCategory, money, netExpense, newEntryId, parseAmount, refundedCents, validDay, type Entry, type PaymentSource, type Refund } from '../ledger'
+import { calendarDay, categories, dateLabel, displayCategory, firstHistoryDay, money, netExpense, newEntryId, parseAmount, refundedCents, validDay, type Entry, type PaymentSource, type Refund } from '../ledger'
 import { changeEntry, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
 
@@ -59,6 +59,7 @@ export function Refunds({ entry, selected, onClose, onSaved }: {
     const cents = parseAmount(amount)
     if (!cents || cents > maximum) { setError(`Introduce un importe entre 0,01 € y ${money(maximum)}.`); return }
     if (!validDay(date)) { setError('Elige una fecha de cobro válida.'); return }
+    if (date < firstHistoryDay) { setError('El historial empieza en septiembre de 2026.'); return }
     const refund = { id: original?.id ?? newEntryId(), cents, date, payment }
     const next = original ? refunds.map(item => item.id === original.id ? refund : item) : [...refunds, refund]
     void update(next, original ? 'Reembolso actualizado' : 'Reembolso registrado')
@@ -86,7 +87,7 @@ export function Refunds({ entry, selected, onClose, onSaved }: {
       </dl>
       {editing ? <form className="entry-form" onSubmit={save}>
         <AmountInput label="Importe del reembolso" value={amount} onChange={setAmount} />
-        <label className="field">Fecha del reembolso<input type="date" required min="0001-01-01" max="9999-12-31" value={date} onChange={event => setDate(event.target.value)} /></label>
+        <label className="field">Fecha del reembolso<input type="date" required min={firstHistoryDay} max="9999-12-31" value={date} onChange={event => setDate(event.target.value)} /></label>
         <div className="field">
           <span id={paymentLabelId}>Recibido en</span>
           <div className="kind-switch" role="group" aria-labelledby={paymentLabelId}>

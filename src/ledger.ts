@@ -2,6 +2,8 @@ import { readReminders, type Reminder } from './reminders.ts'
 
 export type Kind = 'expense' | 'income' | 'withdrawal'
 export type PaymentSource = 'cash' | 'bank'
+export const firstHistoryMonth = '2026-09'
+export const firstHistoryDay = firstHistoryMonth + '-01'
 export interface Refund { id: string, cents: number, date: string, payment: PaymentSource }
 
 export const categories = {

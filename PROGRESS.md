@@ -131,3 +131,9 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 - El selector ocupa un lugar fijo en la fila superior de Resumen, Movimientos y Categorías. En los anchos más estrechos usa nombres de mes abreviados.
 - Los gastos de favoritos y de Máquina Trabajo muestran la categoría en el historial y conservan su concepto para editarlo o buscarlo. Las copias guardan la presentación de los nuevos gastos creados desde favoritos.
 - Registro rápido muestra solo los favoritos y su opción de gestión. El formulario Nuevo permite elegir la categoría de cualquier movimiento.
+
+## Historial desde septiembre e historias con temporizador
+
+- El enlace abre el cierre del mes anterior al seleccionado. El selector, los formularios y el historial visible parten de septiembre de 2026. Los movimientos anteriores guardados siguen en las copias y en el cálculo bancario.
+- Las historias avanzan tras 30 segundos, con barra de progreso, toques, deslizamiento y pausa. La pantalla final permite volver al inicio o consultar los movimientos del mes.
+- La comparación destaca el importe y el porcentaje gastado de más o de menos. Con un mes anterior sin gastos, se muestra la diferencia en euros.

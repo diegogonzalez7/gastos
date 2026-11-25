@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Banknote, Copy, RotateCcw, Trash2 } from 'lucide-react'
-import { calendarDay, categories, categoryIds, displayCategory, MAX_CONCEPT, money, monthLabel, netExpense, newEntryId, parseAmount, paymentSource, refundedCents, validDay, type CategoryId, type Entry, type Kind, type PaymentSource } from '../ledger'
+import { calendarDay, categories, categoryIds, displayCategory, firstHistoryDay, MAX_CONCEPT, money, monthLabel, netExpense, newEntryId, parseAmount, paymentSource, refundedCents, validDay, type CategoryId, type Entry, type Kind, type PaymentSource } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
 import { changeEntry, saveEntry, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
@@ -69,6 +69,7 @@ export function Editor({ draft, onClose, onDuplicate, onRefunds, onSaved, onFavo
     if (!cents) { setError('Introduce un importe entre 0,01 € y 999.999.999,99 €, con un máximo de dos decimales.'); return }
     if (cents < alreadyRefunded) { setError(`El gasto debe cubrir los ${money(alreadyRefunded)} ya reembolsados.`); return }
     if (!editingFavorite && !validDay(date)) { setError('Elige una fecha válida.'); return }
+    if (!editingFavorite && date < firstHistoryDay) { setError('El historial empieza en septiembre de 2026.'); return }
     setBusy(true)
     setError('')
     try {
@@ -130,7 +131,7 @@ export function Editor({ draft, onClose, onDuplicate, onRefunds, onSaved, onFavo
       {kind === 'withdrawal' && <p className="entry-hint">Sacar efectivo reduce el saldo bancario. Los gastos se registran al usar ese dinero.</p>}
       <AmountInput label="Importe" value={amount} onChange={setAmount} />
       {!editingFavorite && <div className={'entry-date' + (differentMonth ? ' different-month' : '')}>
-        <label className="field">Fecha<input type="date" name="date" required min="0001-01-01" max="9999-12-31"
+        <label className="field">Fecha<input type="date" name="date" required min={firstHistoryDay} max="9999-12-31"
           aria-describedby={differentMonth ? monthHintId : undefined} value={date} onChange={e => setDate(e.target.value)} /></label>
         <button className="secondary" type="button" disabled={date === today} onClick={() => setDate(today)}>Hoy</button>
         {differentMonth && <p id={monthHintId}>Mes del movimiento: <strong>{monthLabel(selectedMonth)}</strong></p>}

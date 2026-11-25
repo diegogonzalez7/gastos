@@ -186,8 +186,9 @@
 :root[data-design] .story-stage { background: var(--story-themed-base); }
 :root[data-design] .story-scene { background: radial-gradient(ellipse at 100% 0%, rgb(var(--story-color) / .2), transparent 65%), var(--story-themed-base); }
 :root[data-design] .story-progress button::before { background: var(--story-themed-line); }
-:root[data-design] .story-progress .filled::before { background: var(--story-themed-accent); }
-:root[data-design] .story-progress button[aria-current]::before { background: var(--story-themed-text); }
+:root[data-design] .story-progress-fill { background: var(--story-themed-accent); }
+:root[data-design] .story-progress button[aria-current] .story-progress-fill { background: var(--story-themed-text); }
+:root[data-design] .dialog.story-dialog { --story-more: var(--danger); --story-less: var(--positive); }
 :root[data-design="sand"] .story-scene { --story-color: 124 69 45; }
 :root[data-design="sand"] .story-category .category-badge { background: #f1dfcb; color: #78442c; }
 

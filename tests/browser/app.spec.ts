@@ -47,7 +47,7 @@ test('el selector mantiene su posición con meses largos y cortos en las tres pa
     await navigate(page, screen)
     const heading = await page.getByRole('heading', { level: 1, name: screen }).boundingBox()
     expect(initialPosition?.y).toBe(heading?.y)
-    for (const month of ['Mayo', 'Septiembre', 'Noviembre']) {
+    for (const month of ['Octubre', 'Septiembre', 'Noviembre']) {
       await choose.click()
       await page.getByRole('dialog').getByRole('button', { name: month, exact: true }).click()
       await expect(choose).toHaveAttribute('title', `${month} 2026`)
@@ -64,9 +64,9 @@ test('el selector mantiene su posición con meses largos y cortos en las tres pa
 
 test('el libro mensual se calcula, persiste y se corrige desde el historial', async ({ page }) => {
   await balance(page, '0,00€')
-  await add(page, 'Nómina de febrero', '2000', '2024-02-03', 'salary')
-  await add(page, 'Mercado central', '36,50', '2024-02-29')
-  await add(page, 'Abono de metro', '18.25', '2024-02-10', 'transport')
+  await add(page, 'Nómina de septiembre', '2000', '2026-09-03', 'salary')
+  await add(page, 'Mercado central', '36,50', '2026-09-29')
+  await add(page, 'Abono de metro', '18.25', '2026-09-10', 'transport')
   await balance(page, '1.945,25€')
   await expect(page.locator('.hero-metric').first()).toContainText('2.000,00')
   await expect(page.locator('.hero-metric').last()).toContainText('54,75')
@@ -97,7 +97,7 @@ test('el libro mensual se calcula, persiste y se corrige desde el historial', as
   await page.getByRole('button', { name: 'Todos los meses' }).click()
   await page.getByRole('searchbox').fill('nomina')
   await expect(page.locator('.entry-row')).toHaveCount(1)
-  await expect(page.locator('.entry-row')).toContainText('Nómina de febrero')
+  await expect(page.locator('.entry-row')).toContainText('Nómina de septiembre')
   await page.getByRole('searchbox').fill('')
   await page.getByRole('button', { name: 'Gastos', exact: true }).click()
   await expect(page.locator('.entry-row')).toHaveCount(2)
@@ -135,15 +135,15 @@ test('nuevo movimiento, validación, tema y tamaño de pantalla', async ({ page 
 })
 
 test('exportar y restaurar conserva todas las fechas y exige confirmación', async ({ page }) => {
-  await add(page, 'Libro', '15', '2023-12-29', 'meal')
-  await add(page, 'Billete', '3,55', '2024-01-02', 'transport')
+  await add(page, 'Libro', '15', '2026-09-29', 'meal')
+  await add(page, 'Billete', '3,55', '2026-10-02', 'transport')
   await backups(page)
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Descargar copia' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/^mi-dinero-\d{4}-\d{2}-\d{2}\.json$/)
   const file = JSON.parse(await readFile((await download.path())!, 'utf8'))
-  expect(file.transactions.map((t: { date: string }) => t.date).sort()).toEqual(['2023-12-29', '2024-01-02'])
+  expect(file.transactions.map((t: { date: string }) => t.date).sort()).toEqual(['2026-09-29', '2026-10-02'])
   await expect(page.getByText('Última exportación:')).toBeVisible()
   const upload = (data: unknown) => page.getByLabel('Archivo de copia').setInputFiles({
     name: 'copia.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(data)),
@@ -169,7 +169,7 @@ test('exportar y restaurar conserva todas las fechas y exige confirmación', asy
   await balance(page, '0,00€')
   await backups(page)
   await upload(file)
-  await expect(page.getByText('Diciembre de 2023 a Enero de 2024')).toBeVisible()
+  await expect(page.getByText('Septiembre de 2026 a Octubre de 2026')).toBeVisible()
   await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
   await balance(page, '-3,55€')
   await page.getByRole('button', { name: 'Mes anterior' }).click()
@@ -193,7 +193,7 @@ test('la PWA abre bajo una subruta y el libro funciona sin red', async ({ page, 
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Últimos movimientos' })).toBeVisible()
   await expect.poll(() => page.locator('.hero-wallet').evaluate(node => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
-  await add(page, 'Sin conexión', '7,95', '2025-01-10')
+  await add(page, 'Sin conexión', '7,95', '2026-10-10')
   await balance(page, '-7,95€')
   const newPage = await context.newPage()
   await newPage.goto(page.url())
@@ -537,15 +537,15 @@ test('un reembolso en otro mes se ve por fecha y corrige el gasto original', asy
 })
 
 test('editar el tipo y la fecha traslada el importe al mes correcto', async ({ page }) => {
-  await add(page, 'Devolución', '12,40', '2024-12-31', 'clothes')
+  await add(page, 'Devolución', '12,40', '2026-12-31', 'clothes')
   await page.getByRole('button', { name: 'Editar Devolución' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('button', { name: 'Ingreso', exact: true }).click()
   await dialog.getByLabel('Categoría').selectOption('otherIncome')
-  await dialog.getByLabel('Fecha').fill('2025-01-01')
+  await dialog.getByLabel('Fecha').fill('2027-01-01')
   await dialog.getByRole('button', { name: 'Guardar cambios' }).click()
   await balance(page, '12,40€')
-  await expect(page.getByRole('button', { name: 'Elegir periodo' })).toContainText('Enero 2025')
+  await expect(page.getByRole('button', { name: 'Elegir periodo' })).toContainText('Enero 2027')
   await expect(page.locator('.hero-metric').last()).toContainText('0,00')
   await page.getByRole('button', { name: 'Elegir periodo' }).click()
   await page.getByRole('button', { name: 'Año anterior' }).click()
@@ -562,7 +562,7 @@ test('una restauración detecta cambios posteriores a la vista previa', async ({
   await expect(page.getByRole('dialog', { name: 'Confirmar restauración' })).toBeVisible()
   const second = await context.newPage()
   await second.goto('./')
-  await add(second, 'Movimiento simultáneo', '9,99', '2024-04-10')
+  await add(second, 'Movimiento simultáneo', '9,99', '2026-10-10')
   await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('otra ventana')
   await page.getByRole('button', { name: 'Cerrar' }).click()
@@ -601,9 +601,9 @@ test('el saldo inicial acompaña el historial y se restaura con la copia', async
     await expect(page.getByRole('dialog')).toHaveCount(0)
   }
   await setOpening('500')
-  await add(page, '', '15,25', '2024-09-01', 'food')
+  await add(page, '', '15,25', '2026-09-01', 'food')
   await expect(page.getByRole('button', { name: 'Editar Alimentación' })).toBeVisible()
-  await add(page, '', '120', '2024-11-15', 'salary')
+  await add(page, '', '120', '2026-11-15', 'salary')
   await balance(page, '120,00€')
   const balances = page.getByRole('region', { name: 'Saldos de la cuenta' }).locator('strong')
   await expect(balances.nth(1)).toContainText('604,75')
@@ -652,6 +652,10 @@ test('actualizar la app conserva la base de datos anterior', async ({ browser, p
     const strip = tab.getByRole('region', { name: 'Saldos de la cuenta' })
     await expect(strip.locator('strong').last()).toContainText('-14,00')
     await expect(strip.locator('strong').first()).toContainText('0,00')
+    await navigate(tab, 'Movimientos')
+    await tab.getByRole('button', { name: 'Elegir periodo' }).click()
+    await tab.getByRole('button', { name: 'Todos los meses', exact: true }).click()
+    await expect(tab.getByRole('button', { name: 'Editar Registro anterior' })).toHaveCount(0)
   } finally { await fresh.close() }
 })
 
@@ -732,9 +736,9 @@ test('Supermercado anterior se agrupa en Alimentación sin perder movimientos', 
   const ledger = {
     app: 'mi-dinero', version: 2, currency: 'EUR', openingCents: 0,
     transactions: [
-      { id: '11111111-1111-4111-8111-111111111111', kind: 'expense', category: 'supermarket', cents: 1000, date: '2024-09-01', concept: 'Compra antigua', createdAt: 1 },
-      { id: '22222222-2222-4222-8222-222222222222', kind: 'expense', category: 'food', cents: 500, date: '2024-09-01', concept: 'Compra nueva', createdAt: 2 },
-      { id: '33333333-3333-4333-8333-333333333333', kind: 'expense', category: 'home', cents: 200, date: '2024-09-01', concept: 'Anterior hogar', createdAt: 3 },
+      { id: '11111111-1111-4111-8111-111111111111', kind: 'expense', category: 'supermarket', cents: 1000, date: '2026-09-01', concept: 'Compra antigua', createdAt: 1 },
+      { id: '22222222-2222-4222-8222-222222222222', kind: 'expense', category: 'food', cents: 500, date: '2026-09-01', concept: 'Compra nueva', createdAt: 2 },
+      { id: '33333333-3333-4333-8333-333333333333', kind: 'expense', category: 'home', cents: 200, date: '2026-09-01', concept: 'Anterior hogar', createdAt: 3 },
     ],
   }
   await backups(page)
@@ -842,7 +846,7 @@ test('Compartir entrega la copia JSON al sistema y anota la fecha', async ({ pag
     } })
   })
   await page.reload()
-  await add(page, 'Copia compartida', '1,20', '2024-01-02')
+  await add(page, 'Copia compartida', '1,20', '2026-10-02')
   await backups(page)
   await page.getByRole('button', { name: 'Compartir copia' }).click()
   await expect(page.getByText('Última exportación:')).toBeVisible()
@@ -922,22 +926,53 @@ test('recuperar una copia antigua conserva los recordatorios guardados', async (
 test('el cierre aparece al cambiar de mes y se puede volver a ver o abrir su historial', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-11-30T23:58:00+01:00') })
   await page.reload()
+  await add(page, 'Gasto de septiembre', '80', '2026-09-10', 'food')
   await add(page, 'Gasto anterior', '100', '2026-10-23', 'food')
   await add(page, 'Mercado', '70', '2026-11-22', 'food')
   await add(page, 'Café', '0,90', '2026-11-22', 'machine')
   await add(page, 'Nómina', '1000', '2026-11-01', 'salary')
-  await expect(page.getByRole('button', { name: /Cierre de octubre de 2026/ })).toBeVisible()
+  const story = page.getByRole('dialog', { name: 'Cierre mensual' })
+  await page.getByRole('button', { name: /Cierre de octubre de 2026/ }).click()
+  await story.getByRole('button', { name: 'Frente al mes anterior', exact: true }).click()
+  await expect(story.getByText('Gastaste más', { exact: true })).toBeVisible()
+  await expect(story.getByText(/25\s*% más/)).toBeVisible()
+  await story.getByRole('button', { name: 'Cerrar', exact: true }).click()
+  await page.getByRole('button', { name: 'Mes anterior', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Cierre de septiembre de 2026', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Mes anterior', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^Cierre de/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Mes anterior', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: 'Elegir periodo' }).click()
+  await expect(page.getByRole('button', { name: 'Año anterior', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Agosto', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ir al mes actual', exact: true }).click()
 
   await page.clock.fastForward(3 * 60 * 1000)
   await page.getByRole('button', { name: 'Cierre de noviembre de 2026, nuevo' }).click()
-  const story = page.getByRole('dialog', { name: 'Cierre mensual' })
-  await expect(story.getByRole('heading', { name: 'Balance del mes' })).toBeVisible()
+  const balanceHeading = story.getByRole('heading', { name: 'Balance del mes' })
+  await expect(balanceHeading).toBeVisible()
   await expect(story.locator('.fitted-amount-value')).toContainText('929,10')
-  await story.getByRole('button', { name: 'Siguiente', exact: true }).click()
+  await page.clock.fastForward(15_000)
+  const activeFill = story.locator('[aria-current="step"] .story-progress-fill')
+  const fraction = () => activeFill.evaluate(element => Number((element as HTMLElement).style.transform.slice(7, -1)))
+  expect(await fraction()).toBeGreaterThan(.45)
+  expect(await fraction()).toBeLessThan(.55)
+  await story.getByRole('button', { name: 'Pausar historia' }).click()
+  const paused = await fraction()
+  await page.clock.fastForward(31_000)
+  expect(await fraction()).toBe(paused)
+  await expect(balanceHeading).toBeVisible()
+  await story.getByRole('button', { name: 'Reanudar historia' }).click()
+  await page.clock.fastForward(15_100)
   await expect(story.getByRole('heading', { name: 'La categoría en la que más gastaste' })).toBeVisible()
   await expect(story.locator('.story-category')).toContainText('Alimentación')
 
   const stage = story.locator('.story-stage')
+  const area = (await stage.boundingBox())!
+  await stage.click({ position: { x: 12, y: 50 } })
+  await expect(balanceHeading).toBeVisible()
+  await stage.click({ position: { x: area.width - 12, y: 50 } })
+  await expect(story.getByRole('heading', { name: 'La categoría en la que más gastaste' })).toBeVisible()
   await stage.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: 200, clientY: 100 })
   await stage.dispatchEvent('pointerup', { pointerType: 'touch', clientX: 90, clientY: 105 })
   await expect(story.getByRole('heading', { name: 'Tu mayor gasto' })).toBeVisible()
@@ -945,8 +980,11 @@ test('el cierre aparece al cambiar de mes y se puede volver a ver o abrir su his
   await page.keyboard.press('ArrowRight')
   await expect(story.getByRole('heading', { name: 'Frente al mes anterior' })).toBeVisible()
   await expect(story.locator('.fitted-amount-value')).toContainText('29,10')
+  await expect(story.getByText(/29,1\s*% menos/)).toBeVisible()
   await story.getByRole('button', { name: 'Saldo bancario al cierre', exact: true }).click()
-  await expect(story.locator('.fitted-amount-value')).toContainText('830,00')
+  await expect(story.locator('.fitted-amount-value')).toContainText('750,00')
+  await page.clock.fastForward(31_000)
+  await expect(story.getByRole('button', { name: 'Volver al inicio' })).toBeVisible()
   await story.getByRole('button', { name: 'Ver movimientos', exact: true }).click()
   await expect(story).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Movimientos', level: 1 })).toBeVisible()
@@ -955,7 +993,11 @@ test('el cierre aparece al cambiar de mes y se puede volver a ver o abrir su his
 
   await page.goto('./')
   await page.getByRole('button', { name: 'Cierre de noviembre de 2026', exact: true }).click()
-  await expect(story.getByRole('heading', { name: 'Balance del mes' })).toBeVisible()
+  await expect(balanceHeading).toBeVisible()
+  await story.getByRole('button', { name: 'Saldo bancario al cierre', exact: true }).click()
+  await story.getByRole('button', { name: 'Volver al inicio' }).click()
+  await expect(story).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Elegir periodo' })).toHaveAttribute('title', 'Diciembre 2026')
 })
 
 test('el aviso mensual genera una cita recurrente y enlaza al atajo existente', async ({ page }) => {

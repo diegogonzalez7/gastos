@@ -3,7 +3,7 @@ import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, ChartPie, ChevronRight, ListFilter, Plus, Search, Star, Wallet, X,
 } from 'lucide-react'
 import {
-  capitalize, categories, categoryIds, dateLabel, displayCategory, money, paymentSource, percent, searchText,
+  capitalize, categories, categoryIds, dateLabel, displayCategory, firstHistoryDay, money, paymentSource, percent, searchText,
   type CategoryId, type Entry, type Kind, type Refund, type Summary,
 } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
@@ -35,9 +35,9 @@ type Movement = { entry: Entry, date: string, refund?: Refund }
 function movementRows(entries: Entry[], month: string | null) {
   const rows: Movement[] = []
   for (const entry of entries) {
-    if (month === null || entry.date.startsWith(month)) rows.push({ entry, date: entry.date })
+    if (entry.date >= firstHistoryDay && (month === null || entry.date.startsWith(month))) rows.push({ entry, date: entry.date })
     for (const refund of entry.refunds ?? []) {
-      if (month === null || refund.date.startsWith(month)) rows.push({ entry, date: refund.date, refund })
+      if (refund.date >= firstHistoryDay && (month === null || refund.date.startsWith(month))) rows.push({ entry, date: refund.date, refund })
     }
   }
   return rows.sort((a, b) => b.date.localeCompare(a.date) || b.entry.createdAt - a.entry.createdAt)
