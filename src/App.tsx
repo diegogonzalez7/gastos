@@ -249,9 +249,7 @@ export default function App() {
   </button>
 
   return <div className="app-shell" inert={loadState === 'loading'}>
-    {hasLandscape(design) && <div className="app-landscape" aria-hidden="true">
-      <div className="app-landscape-motion"><i /><i /><i /><i /><i /><i /><i /><i /></div>
-    </div>}
+    {hasLandscape(design) && <div className="app-landscape" aria-hidden="true" />}
     <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>Saltar al contenido</a>
     <aside className="sidebar">
       <a href="#resumen" className="brand-link" aria-label="Mi Dinero, resumen"><Brand /></a>

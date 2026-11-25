@@ -30,7 +30,7 @@ export function DesignPicker({ selected, originalTheme, onChange, onClose, onBac
     </div>
     <section className="design-collection" aria-labelledby="one-piece-title">
       <h3 id="one-piece-title">One Piece</h3>
-      <p>Cuatro paisajes animados inspirados en la aventura de los Sombrero de Paja, entre islas, mares y cielos de la historia.</p>
+      <p>Cuatro paisajes inspirados en la aventura de los Sombrero de Paja, entre islas, mares y cielos de la historia.</p>
       <div className="design-grid">{onePieceDesigns.map(design => option(design, true))}</div>
     </section>
   </Modal>
