@@ -1287,6 +1287,7 @@ test('la colección One Piece muestra los cuatro paisajes y conserva el elegido 
 
   await picker.getByRole('button', { name: 'Cerrar' }).click()
   await page.evaluate(() => navigator.serviceWorker.ready)
+  await page.reload()
   await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
   await context.setOffline(true)
   await page.emulateMedia({ reducedMotion: 'reduce' })
