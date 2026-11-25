@@ -71,13 +71,13 @@ test('el filtro por forma de pago aplica el cobro de cada reembolso y suma las f
   const move = (sequence: number, entry: object) => ({ id: id(sequence), date, createdAt: sequence, ...entry })
   const transactions = [
     move(1, { kind: 'income', category: 'salary', concept: 'Nómina', cents: 10000 }),
-    move(2, { kind: 'expense', category: 'machine', concept: 'Café', cents: 42 }),
+    move(2, { kind: 'expense', category: 'machine', concept: 'Café especial', cents: 42 }),
     move(3, { kind: 'expense', category: 'meal', concept: 'Comida en efectivo', cents: 1500, payment: 'cash',
       refunds: [{ id: id(7), date, cents: 800, payment: 'bank' }] }),
     move(4, { kind: 'expense', category: 'meal', concept: 'Cena con tarjeta', cents: 4000,
       refunds: [{ id: id(8), date, cents: 2000, payment: 'cash' }] }),
     move(5, { kind: 'withdrawal', category: 'withdrawal', concept: 'Cajero', cents: 3000 }),
-    move(6, { kind: 'income', category: 'gift', concept: 'Regalo', cents: 1000, payment: 'cash' }),
+    move(6, { kind: 'income', category: 'gift', concept: 'Regalo especial', cents: 1000, payment: 'cash' }),
   ]
   await backups(page)
   await page.getByLabel('Archivo de copia').setInputFiles({
@@ -96,9 +96,14 @@ test('el filtro por forma de pago aplica el cobro de cada reembolso y suma las f
   await expect(page.getByRole('button', { name: 'Editar Reembolso · Cena con tarjeta', exact: true })).toBeVisible()
   await expect(totals).toContainText('Gastos15,42')
   await expect(net).toContainText('14,58')
+  const alignment = () => totals.locator(':scope > div').evaluateAll(columns => columns.map(column => getComputedStyle(column).textAlign))
+  await page.getByRole('searchbox').fill('especial')
+  await expect(totals.locator('dt')).toHaveText(['Ingresos', 'Gastos', 'Neto visible'])
+  expect(await alignment()).toEqual(['start', 'center', 'end'])
   await page.getByRole('searchbox').fill('maquina trabajo')
   await expect(page.locator('.entry-row')).toHaveCount(1)
   await expect(net).toContainText('-0,42')
+  expect(await alignment()).toEqual(['start', 'end'])
 
   await method.getByRole('button', { name: 'Cuenta bancaria', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Sin resultados' })).toBeVisible()

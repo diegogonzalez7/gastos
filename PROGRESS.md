@@ -150,6 +150,7 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 ## Filtro por forma de pago
 
 - Movimientos permite filtrar por efectivo o cuenta bancaria y muestra los importes y el neto de las filas visibles. Cada reembolso se filtra por su propia forma de cobro y las retiradas aparecen con los movimientos bancarios.
+- Los totales visibles se distribuyen a lo ancho. Con tres importes se alinean a la izquierda, al centro y a la derecha. Con dos importes ocupan los extremos.
 
 ## Pendientes
 
