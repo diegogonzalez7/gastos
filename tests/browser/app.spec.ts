@@ -65,6 +65,56 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Nuevo movimiento' })).toBeEnabled()
 })
 
+test('el filtro por forma de pago aplica el cobro de cada reembolso y suma las filas visibles', async ({ page }) => {
+  const id = (sequence: number) => `12345678-1234-4234-8234-${String(sequence).padStart(12, '0')}`
+  const date = '2026-11-25'
+  const move = (sequence: number, entry: object) => ({ id: id(sequence), date, createdAt: sequence, ...entry })
+  const transactions = [
+    move(1, { kind: 'income', category: 'salary', concept: 'Nómina', cents: 10000 }),
+    move(2, { kind: 'expense', category: 'machine', concept: 'Café', cents: 42 }),
+    move(3, { kind: 'expense', category: 'meal', concept: 'Comida en efectivo', cents: 1500, payment: 'cash',
+      refunds: [{ id: id(7), date, cents: 800, payment: 'bank' }] }),
+    move(4, { kind: 'expense', category: 'meal', concept: 'Cena con tarjeta', cents: 4000,
+      refunds: [{ id: id(8), date, cents: 2000, payment: 'cash' }] }),
+    move(5, { kind: 'withdrawal', category: 'withdrawal', concept: 'Cajero', cents: 3000 }),
+    move(6, { kind: 'income', category: 'gift', concept: 'Regalo', cents: 1000, payment: 'cash' }),
+  ]
+  await backups(page)
+  await page.getByLabel('Archivo de copia').setInputFiles({
+    name: 'pagos.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({
+      app: 'mi-dinero', version: 5, currency: 'EUR', openingCents: 0, transactions,
+    })),
+  })
+  await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+  await navigate(page, 'Movimientos')
+  const totals = page.locator('.history-totals')
+  const net = totals.locator('.history-net dd')
+  const method = page.getByRole('group', { name: 'Filtrar por forma de pago' })
+  await expect(net).toContainText('52,58')
+  await method.getByRole('button', { name: 'Efectivo', exact: true }).click()
+  await expect(page.locator('.entry-row')).toHaveCount(4)
+  await expect(page.getByRole('button', { name: 'Editar Reembolso · Cena con tarjeta', exact: true })).toBeVisible()
+  await expect(totals).toContainText('Gastos15,42')
+  await expect(net).toContainText('14,58')
+  await page.getByRole('searchbox').fill('maquina trabajo')
+  await expect(page.locator('.entry-row')).toHaveCount(1)
+  await expect(net).toContainText('-0,42')
+
+  await method.getByRole('button', { name: 'Cuenta bancaria', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Sin resultados' })).toBeVisible()
+  await page.getByRole('button', { name: 'Quitar filtros' }).click()
+  await expect(method.getByRole('button', { name: 'Todas', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.entry-row')).toHaveCount(8)
+
+  await method.getByRole('button', { name: 'Cuenta bancaria', exact: true }).click()
+  await expect(page.locator('.entry-row')).toHaveCount(4)
+  await expect(page.getByRole('button', { name: 'Editar Reembolso · Comida en efectivo', exact: true })).toBeVisible()
+  await expect(net).toContainText('38,00')
+  await page.getByRole('group', { name: 'Filtrar por tipo' }).getByRole('button', { name: 'Retiradas', exact: true }).click()
+  await expect(page.locator('.entry-row')).toHaveCount(1)
+  await expect(net).toContainText('-30,00')
+})
+
 test('Ajustes agrupa las opciones y permite volver desde sus secciones', async ({ page }) => {
   const more = page.getByRole('button', { name: 'Más', exact: true })
   let menu = page.locator('.sidebar-bottom')

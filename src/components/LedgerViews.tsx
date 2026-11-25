@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import {
   capitalize, categories, categoryIds, dateLabel, displayCategory, money, paymentSource, percent, searchText,
-  type CategoryId, type Entry, type Kind, type Refund, type Summary,
+  type CategoryId, type Entry, type Kind, type PaymentSource, type Refund, type Summary,
 } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
 import { CategoryBadge, EmptyState, FittedAmount, Modal } from './ui'
@@ -180,20 +180,29 @@ export function History({ entries, month, firstHistoryDay, category, onClearCate
 }) {
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<Kind | 'all'>('all')
+  const [payment, setPayment] = useState<PaymentSource | 'all'>('all')
   const keyword = searchText(query)
   const rows = movementRows(entries, month, firstHistoryDay).filter(({ entry, refund }) => {
     const displayed = displayCategory(entry.category)
     return (kind === 'all' || (!refund && entry.kind === kind)) && (!category || displayed === category) &&
+      (payment === 'all' || (refund?.payment ?? paymentSource(entry)) === payment) &&
       (!keyword || searchText([entry.concept, categories[displayed].name, refund ? 'Reembolso' : ''].join(' ')).includes(keyword))
   })
   const grouped = new Map<string, Movement[]>()
+  const totals = { income: 0, expense: 0, refund: 0, withdrawal: 0 }
   for (const row of rows) {
     const group = grouped.get(row.date) ?? []
     group.push(row)
     grouped.set(row.date, group)
+    if (row.refund) totals.refund += row.refund.cents
+    else totals[row.entry.kind] += row.entry.cents
   }
-  const filtered = Boolean(keyword || category || kind !== 'all')
-  function reset() { setQuery(''); setKind('all'); onClearCategory() }
+  const totalRows = [
+    ['Ingresos', totals.income], ['Gastos', totals.expense], ['Reembolsos', totals.refund], ['Retiradas', totals.withdrawal],
+  ] as const
+  const net = totals.income + totals.refund - totals.expense - totals.withdrawal
+  const filtered = Boolean(keyword || category || kind !== 'all' || payment !== 'all')
+  function reset() { setQuery(''); setKind('all'); setPayment('all'); onClearCategory() }
   return <section className="panel history-panel">
     <div className="history-tools">
       <label className="search-box"><Search size={18} /><input type="search" aria-label="Buscar movimientos"
@@ -202,14 +211,27 @@ export function History({ entries, month, firstHistoryDay, category, onClearCate
         {([['all', 'Todos'], ['expense', 'Gastos'], ['income', 'Ingresos'], ['withdrawal', 'Retiradas']] as const).map(([value, label]) =>
           <button key={value} aria-pressed={kind === value} onClick={() => setKind(value)}>{label}</button>)}
       </div>
+      <div className="history-payment">
+        <span>Forma de pago</span>
+        <div className="filter-group" role="group" aria-label="Filtrar por forma de pago">
+          {([['all', 'Todas'], ['cash', 'Efectivo'], ['bank', 'Cuenta bancaria']] as const).map(([value, label]) =>
+            <button key={value} aria-pressed={payment === value} onClick={() => setPayment(value)}>{label}</button>)}
+        </div>
+      </div>
     </div>
     {category && <button className="filter-chip" aria-label={'Quitar filtro de ' + categories[category].name} onClick={onClearCategory}>
       <ListFilter size={14} />{categories[category].name}<X size={14} /></button>}
+    {rows.length > 0 && <dl className="history-totals" aria-label="Totales de movimientos visibles" aria-live="polite">
+      {totalRows.filter(([, cents]) => cents > 0).map(([label, cents]) => <div key={label}>
+        <dt>{label}</dt><dd className="money">{money(cents)}</dd>
+      </div>)}
+      <div className="history-net"><dt>Neto visible</dt><dd className="money">{money(net)}</dd></div>
+    </dl>}
     {rows.length ? [...grouped].map(([day, group]) => <div className="date-group" key={day}>
       <h2>{capitalize(dateLabel(day, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</h2>
       {group.map(row => <MovementRow key={row.entry.id + (row.refund?.id ?? '')} movement={row} onEdit={onEdit} onEditRefund={onEditRefund} />)}
     </div>) : <EmptyState title={filtered ? 'Sin resultados' : 'Aún no hay movimientos'}
-      description={filtered ? 'Prueba otro concepto, categoría o tipo de movimiento.' : 'Añade un movimiento o elige otro periodo.'}
+      description={filtered ? 'Cambia la búsqueda o los filtros.' : 'Añade un movimiento o elige otro periodo.'}
       action={<button className="text-button" onClick={filtered ? reset : onAdd}>{filtered ? 'Quitar filtros' : 'Añadir movimiento'}<ArrowRight size={15} /></button>} />}
   </section>
 }

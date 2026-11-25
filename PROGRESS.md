@@ -146,3 +146,12 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 ## Organización de ajustes
 
 - La barra lateral y el menú Más dan acceso a Recordatorios y Ajustes. Ajustes agrupa General, Apariencia, Notificaciones y Copias de seguridad. Cada sección permite volver al menú.
+
+## Filtro por forma de pago
+
+- Movimientos permite filtrar por efectivo o cuenta bancaria y muestra los importes y el neto de las filas visibles. Cada reembolso se filtra por su propia forma de cobro y las retiradas aparecen con los movimientos bancarios.
+
+## Pendientes
+
+- [ ] Ofrecer Deshacer tras borrar un movimiento y recuperar también los reembolsos vinculados.
+- [ ] Incluir favoritos y ajustes de forma opcional en las copias de seguridad, con opción de restaurarlos junto al historial.
