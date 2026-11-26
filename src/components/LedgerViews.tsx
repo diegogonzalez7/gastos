@@ -33,12 +33,15 @@ export function EntryRow({ entry, onEdit, showDate = false }: { entry: Entry, on
 
 type Movement = { entry: Entry, date: string, refund?: Refund }
 
-function movementRows(entries: Entry[], month: string | null, firstHistoryDay: string) {
+function movementRows(entries: Entry[], month: string | null, firstHistoryDay: string, today: string) {
   const rows: Movement[] = []
   for (const entry of entries) {
+    if (entry.date > today) continue
     if (entry.date >= firstHistoryDay && (month === null || entry.date.startsWith(month))) rows.push({ entry, date: entry.date })
     for (const refund of entry.refunds ?? []) {
-      if (refund.date >= firstHistoryDay && (month === null || refund.date.startsWith(month))) rows.push({ entry, date: refund.date, refund })
+      if (refund.date >= firstHistoryDay && refund.date <= today && (month === null || refund.date.startsWith(month))) {
+        rows.push({ entry, date: refund.date, refund })
+      }
     }
   }
   return rows.sort((a, b) => b.date.localeCompare(a.date) || b.entry.createdAt - a.entry.createdAt)
@@ -129,6 +132,7 @@ interface DashboardProps {
   entries: Entry[]
   month: string
   firstHistoryDay: string
+  today: string
   onAdd: (category?: CategoryId) => void
   onEdit: (entry: Entry) => void
   onEditRefund: (entry: Entry, refund: Refund) => void
@@ -139,8 +143,8 @@ interface DashboardProps {
   onManageFavorites: () => void
 }
 
-export function Dashboard({ account, openingCents, onOpening, totals, entries, month, firstHistoryDay, onAdd, onEdit, onEditRefund, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
-  const recent = movementRows(entries, month, firstHistoryDay).slice(0, 5)
+export function Dashboard({ account, openingCents, onOpening, totals, entries, month, firstHistoryDay, today, onAdd, onEdit, onEditRefund, onHistory, onCategories, favorites, onUseFavorite, onManageFavorites }: DashboardProps) {
+  const recent = movementRows(entries, month, firstHistoryDay, today).slice(0, 5)
   return <div className="view-stack">
     <Balance totals={totals} />
     <section className="panel account-strip" aria-label="Saldos de la cuenta">
@@ -175,15 +179,15 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, m
   </div>
 }
 
-export function History({ entries, month, firstHistoryDay, category, onClearCategory, onEdit, onEditRefund, onAdd }: {
-  entries: Entry[], month: string | null, firstHistoryDay: string, category: CategoryId | null, onClearCategory: () => void,
+export function History({ entries, month, firstHistoryDay, today, category, onClearCategory, onEdit, onEditRefund, onAdd }: {
+  entries: Entry[], month: string | null, firstHistoryDay: string, today: string, category: CategoryId | null, onClearCategory: () => void,
   onEdit: (entry: Entry) => void, onEditRefund: (entry: Entry, refund: Refund) => void, onAdd: () => void,
 }) {
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<Kind | 'all'>('all')
   const [payment, setPayment] = useState<PaymentSource | 'all'>('all')
   const keyword = searchText(query)
-  const rows = movementRows(entries, month, firstHistoryDay).filter(({ entry, refund }) => {
+  const rows = movementRows(entries, month, firstHistoryDay, today).filter(({ entry, refund }) => {
     const displayed = displayCategory(entry.category)
     return (kind === 'all' || (!refund && entry.kind === kind)) && (!category || displayed === category) &&
       (payment === 'all' || (refund?.payment ?? paymentSource(entry)) === payment) &&

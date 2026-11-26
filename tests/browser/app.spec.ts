@@ -733,6 +733,8 @@ test('un reembolso en otro mes se ve por fecha y corrige el gasto original', asy
 })
 
 test('editar el tipo y la fecha traslada el importe al mes correcto', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2027-01-01T12:00:00+01:00'))
+  await page.reload()
   await add(page, 'Devolución', '12,40', '2026-12-31', 'clothes')
   await page.getByRole('button', { name: 'Editar Devolución' }).click()
   const dialog = page.getByRole('dialog')
@@ -1406,4 +1408,93 @@ test('Dropbox confirma la subida y conserva las cinco copias más recientes', as
   expect(Array.from(remote.keys()).sort()).toEqual([
     'id:backup-22', 'id:backup-23', 'id:backup-24', 'id:manual', 'id:new-1', 'id:new-2', 'id:unrelated',
   ])
+})
+
+test('el calendario oculta meses futuros y los formularios solo guardan hasta hoy', async ({ page }) => {
+  const previous = page.getByRole('button', { name: 'Mes anterior', exact: true })
+  const next = page.getByRole('button', { name: 'Mes siguiente', exact: true })
+  const period = page.getByRole('button', { name: 'Elegir periodo' })
+  const picker = page.getByRole('dialog', { name: 'Elegir periodo' })
+  for (const tab of ['Resumen', 'Movimientos', 'Categorías']) {
+    await navigate(page, tab)
+    await expect(next).toBeDisabled()
+    await period.click()
+    await expect(picker.getByRole('button', { name: 'Año siguiente' })).toBeDisabled()
+    await expect(picker.getByRole('button', { name: 'Diciembre', exact: true })).toHaveCount(0)
+    await expect(picker.getByRole('button', { name: 'Noviembre', exact: true })).toBeVisible()
+    await picker.getByRole('button', { name: 'Cerrar' }).click()
+  }
+  await navigate(page, 'Resumen')
+  await previous.click()
+  await expect(next).toBeEnabled()
+  await next.click()
+  await expect(period).toHaveAttribute('title', 'Noviembre 2026')
+
+  await page.getByRole('button', { name: 'Nuevo movimiento' }).click()
+  const editor = page.getByRole('dialog', { name: 'Nuevo movimiento' })
+  const date = editor.getByLabel('Fecha', { exact: true })
+  await expect(date).toHaveValue('2026-11-25')
+  await expect(date).toHaveAttribute('max', '2026-11-25')
+  await editor.getByLabel('Importe', { exact: true }).fill('10')
+  await editor.getByLabel('Concepto').fill('Compra de hoy')
+  await date.fill('2026-11-26')
+  expect(await date.evaluate(input => (input as HTMLInputElement).validity.rangeOverflow)).toBe(true)
+  await editor.locator('form').dispatchEvent('submit')
+  await expect(editor.getByRole('alert')).toHaveText('Elige la fecha de hoy o una anterior.')
+  await editor.getByRole('button', { name: 'Ingreso', exact: true }).click()
+  await date.fill('2026-12-01')
+  await editor.locator('form').dispatchEvent('submit')
+  await expect(editor.getByRole('alert')).toHaveText('Elige la fecha de hoy o una anterior.')
+  await editor.getByRole('button', { name: 'Gasto', exact: true }).click()
+  await editor.getByRole('button', { name: 'Hoy', exact: true }).click()
+  await editor.getByRole('button', { name: 'Guardar movimiento' }).click()
+  await balance(page, '-10,00€')
+
+  await page.getByRole('button', { name: 'Editar Compra de hoy' }).click()
+  await page.getByRole('button', { name: 'Registrar reembolso' }).click()
+  const refund = page.getByRole('dialog', { name: 'Registrar reembolso' })
+  const refundDate = refund.getByLabel('Fecha del reembolso')
+  await expect(refundDate).toHaveAttribute('max', '2026-11-25')
+  await refund.getByLabel('Importe del reembolso').fill('1')
+  await refundDate.fill('2026-12-01')
+  await refund.locator('form').dispatchEvent('submit')
+  await expect(refund.getByRole('alert')).toHaveText('Elige la fecha de hoy o una anterior.')
+  await refundDate.fill('2026-11-25')
+  await refund.getByRole('button', { name: 'Guardar reembolso' }).click()
+  await balance(page, '-9,00€')
+})
+
+test('los movimientos futuros de una copia se conservan y aparecen al llegar su fecha', async ({ page }) => {
+  const transactions = [
+    { id: '12345678-1234-4234-8234-000000000001', kind: 'expense', category: 'food', date: '2026-11-22',
+      concept: 'Mercado antiguo', cents: 1000, createdAt: 1, refunds: [
+        { id: '12345678-1234-4234-8234-000000000002', date: '2026-12-01', cents: 200, payment: 'bank' },
+      ] },
+    { id: '12345678-1234-4234-8234-000000000003', kind: 'expense', category: 'food', date: '2026-11-26',
+      concept: 'Mercado del día siguiente', cents: 300, createdAt: 1 },
+    { id: '12345678-1234-4234-8234-000000000004', kind: 'income', category: 'salary', date: '2026-12-01',
+      concept: 'Ingreso de diciembre', cents: 1500, createdAt: 1 },
+  ]
+  await backups(page)
+  await page.getByLabel('Archivo de copia').setInputFiles({
+    name: 'mi-dinero-anterior.json', mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ app: 'mi-dinero', version: 4, currency: 'EUR', openingCents: 0, transactions })),
+  })
+  await page.getByRole('button', { name: 'Restaurar copia', exact: true }).click()
+  await balance(page, '-10,00€')
+  const bankTotal = page.getByRole('region', { name: 'Saldos de la cuenta' }).locator('strong').last()
+  await expect(bankTotal).toHaveText(/^-10,00\s*€$/)
+  await navigate(page, 'Movimientos')
+  await page.getByRole('button', { name: 'Elegir periodo' }).click()
+  await page.getByRole('button', { name: 'Todos los meses', exact: true }).click()
+  await expect(page.locator('.entry-row')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Editar Mercado antiguo' })).toBeVisible()
+
+  await page.clock.fastForward(6 * 24 * 60 * 60 * 1000)
+  await expect(page.locator('.entry-row')).toHaveCount(4)
+  await expect(page.getByRole('button', { name: 'Editar Ingreso de diciembre' })).toBeVisible()
+  await navigate(page, 'Resumen')
+  await expect(page.getByRole('button', { name: 'Elegir periodo' })).toHaveAttribute('title', 'Diciembre 2026')
+  await expect(bankTotal).toHaveText(/^4,00\s*€$/)
+  await balance(page, '15,00€')
 })

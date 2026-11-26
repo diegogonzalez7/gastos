@@ -4,8 +4,8 @@ import { calendarDay, categories, dateLabel, displayCategory, money, monthLabel,
 import { changeEntry, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
 
-export function Refunds({ entry, selected, firstHistoryDay, onClose, onSaved }: {
-  firstHistoryDay: string,
+export function Refunds({ entry, selected, firstHistoryDay, today, onClose, onSaved }: {
+  firstHistoryDay: string, today: string,
   entry: Entry, selected?: Refund, onClose: () => void, onSaved: (message: string, undo?: () => Promise<void>) => void,
 }) {
   const refunds = entry.refunds ?? []
@@ -64,6 +64,7 @@ export function Refunds({ entry, selected, firstHistoryDay, onClose, onSaved }: 
     const cents = parseAmount(amount)
     if (!cents || cents > maximum) { setError(`Introduce un importe entre 0,01 € y ${money(maximum)}.`); return }
     if (!validDay(date)) { setError('Elige una fecha de cobro válida.'); return }
+    if (date > calendarDay()) { setError('Elige la fecha de hoy o una anterior.'); return }
     if (date < firstHistoryDay) { setError(`El historial empieza en ${monthLabel(firstHistoryDay.slice(0, 7)).toLocaleLowerCase('es')}.`); return }
     const refund = { id: original?.id ?? newEntryId(), cents, date, payment }
     const next = original ? refunds.map(item => item.id === original.id ? refund : item) : [...refunds, refund]
@@ -92,7 +93,7 @@ export function Refunds({ entry, selected, firstHistoryDay, onClose, onSaved }: 
       </dl>
       {editing ? <form className="entry-form" onSubmit={save}>
         <AmountInput label="Importe del reembolso" value={amount} onChange={setAmount} />
-        <label className="field">Fecha del reembolso<input type="date" required min={firstHistoryDay} max="9999-12-31" value={date} onChange={event => setDate(event.target.value)} /></label>
+        <label className="field">Fecha del reembolso<input type="date" required min={firstHistoryDay} max={today} value={date} onChange={event => setDate(event.target.value)} /></label>
         <div className="field">
           <span id={paymentLabelId}>Recibido en</span>
           <div className="kind-switch" role="group" aria-labelledby={paymentLabelId}>

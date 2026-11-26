@@ -7,8 +7,8 @@ import { AmountInput, Modal } from './ui'
 
 export interface EditorDraft { original?: Entry, copy?: Entry, category?: CategoryId, date: string, favorite?: Favorite, mode?: 'favorite' }
 
-export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds, onSaved, onDeleted, onFavorite }: {
-  firstHistoryDay: string,
+export function Editor({ draft, firstHistoryDay, today, onClose, onDuplicate, onRefunds, onSaved, onDeleted, onFavorite }: {
+  firstHistoryDay: string, today: string,
   draft: EditorDraft, onClose: () => void, onDuplicate: (entry: Entry) => void, onSaved: (date: string | null, message: string) => void,
   onFavorite: (id: string, favorite: Favorite | null) => Promise<void>, onDeleted: (entry: Entry) => void,
   onRefunds: (entry: Entry) => void,
@@ -35,7 +35,6 @@ export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds
   const monthHintId = useId()
   const paymentLabelId = useId()
   const machineHintId = useId()
-  const today = calendarDay()
   const selectedMonth = date.slice(0, 7)
   const differentMonth = validDay(date) && selectedMonth !== today.slice(0, 7)
   const effectivePayment = paymentSource({ category, payment })
@@ -70,6 +69,7 @@ export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds
     if (!cents) { setError('Introduce un importe entre 0,01 € y 999.999.999,99 €, con un máximo de dos decimales.'); return }
     if (cents < alreadyRefunded) { setError(`El gasto debe cubrir los ${money(alreadyRefunded)} ya reembolsados.`); return }
     if (!editingFavorite && !validDay(date)) { setError('Elige una fecha válida.'); return }
+    if (!editingFavorite && date > calendarDay()) { setError('Elige la fecha de hoy o una anterior.'); return }
     if (!editingFavorite && date < firstHistoryDay) { setError(`El historial empieza en ${monthLabel(firstHistoryDay.slice(0, 7)).toLocaleLowerCase('es')}.`); return }
     setBusy(true)
     setError('')
@@ -132,7 +132,7 @@ export function Editor({ draft, firstHistoryDay, onClose, onDuplicate, onRefunds
       {kind === 'withdrawal' && <p className="entry-hint">Sacar efectivo reduce el saldo bancario. Los gastos se registran al usar ese dinero.</p>}
       <AmountInput label="Importe" value={amount} onChange={setAmount} />
       {!editingFavorite && <div className={'entry-date' + (differentMonth ? ' different-month' : '')}>
-        <label className="field">Fecha<input type="date" name="date" required min={firstHistoryDay} max="9999-12-31"
+        <label className="field">Fecha<input type="date" name="date" required min={firstHistoryDay} max={today}
           aria-describedby={differentMonth ? monthHintId : undefined} value={date} onChange={e => setDate(e.target.value)} /></label>
         <button className="secondary" type="button" disabled={date === today} onClick={() => setDate(today)}>Hoy</button>
         {differentMonth && <p id={monthHintId}>Mes del movimiento: <strong>{monthLabel(selectedMonth)}</strong></p>}

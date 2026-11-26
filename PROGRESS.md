@@ -144,6 +144,7 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 ## Mes de inicio configurable
 
 - Ajustes permite elegir el primer mes del calendario, los movimientos y los cierres. La preferencia se guarda en el dispositivo. Las instalaciones anteriores parten de septiembre de 2026 y las nuevas de enero del año actual.
+- El calendario llega hasta el mes actual. Los formularios limitan las fechas a hoy y el historial incorpora los movimientos antiguos con fecha futura cuando llega su día.
 - La prueba de navegador verifica que un inicio en abril de 2020 se recuerda y que los movimientos ocultos reaparecen al ampliar el periodo. Las copias y el saldo conservan los movimientos previos.
 
 ## Organización de ajustes

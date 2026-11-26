@@ -4,7 +4,7 @@ import {
   List, MonitorSmartphone, Moon, Palette, PieChart, Plus, Settings, SlidersHorizontal, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
-  accountBalances, calendarDay, capitalize, dateLabel, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
+  accountBalances, calendarDay, capitalize, dateLabel, entriesThrough, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
 } from './ledger'
 import { readLedger, saveDesign, saveEntry, saveFavorite, saveTheme, storageMessage, watchEntries } from './storage'
 import { Brand, Modal } from './components/ui'
@@ -63,8 +63,11 @@ function ThemeControl({ theme, onChange }: { theme: Theme, onChange: (theme: The
 export default function App() {
   const [today, setToday] = useState(calendarDay)
   const [page, setPage] = useState<Page>(pageFromHash)
-  const [firstHistoryMonth, setFirstHistoryMonth] = useState(() => today.slice(0, 4) + '-01')
-  const [month, setMonth] = useState(() => today.slice(0, 7))
+  const [historyStart, setHistoryStart] = useState(() => today.slice(0, 4) + '-01')
+  const [selectedMonth, setMonth] = useState(() => today.slice(0, 7))
+  const currentMonth = today.slice(0, 7)
+  const firstHistoryMonth = historyStart > currentMonth ? currentMonth : historyStart
+  const month = selectedMonth > currentMonth ? currentMonth : selectedMonth < firstHistoryMonth ? firstHistoryMonth : selectedMonth
   const [allMonths, setAllMonths] = useState(false)
   const [category, setCategory] = useState<CategoryId | null>(null)
   const [theme, setTheme] = useState<Theme>(savedTheme)
@@ -93,8 +96,7 @@ export default function App() {
         setOpeningCents(ledger.openingCents)
         setEntries(latestFirst(ledger.entries))
         setReminders(ledger.reminders)
-        setFirstHistoryMonth(ledger.settings.historyStart)
-        setMonth(selected => selected < ledger.settings.historyStart ? ledger.settings.historyStart : selected)
+        setHistoryStart(ledger.settings.historyStart)
         setTheme(ledger.settings.theme)
         setDesign(ledger.settings.design)
         setFavorites(ledger.favorites)
@@ -163,18 +165,19 @@ export default function App() {
     return () => window.clearTimeout(timer)
   }, [toast])
 
-  const monthEntries = useMemo(() => monthly(entries, month), [entries, month])
+  const postedEntries = useMemo(() => entriesThrough(entries, today), [entries, today])
+  const monthEntries = useMemo(() => monthly(postedEntries, month), [postedEntries, month])
   const totals = useMemo(() => summarize(monthEntries), [monthEntries])
-  const account = useMemo(() => accountBalances({ entries, openingCents }, month), [entries, openingCents, month])
-  const currentMonth = today.slice(0, 7)
+  const account = useMemo(() => accountBalances({ entries: postedEntries, openingCents }, month), [postedEntries, openingCents, month])
   const lastClosedMonth = shiftMonth(currentMonth, -1)
   const previousMonth = shiftMonth(month, -1)
   const reportLinkMonth = previousMonth >= firstHistoryMonth && previousMonth < currentMonth ? previousMonth : null
   const unreadReport = reportLinkMonth === lastClosedMonth && seenReport !== lastClosedMonth &&
-    entries.some(entry => entry.date.startsWith(lastClosedMonth) || entry.refunds?.some(refund => refund.date.startsWith(lastClosedMonth)))
+    postedEntries.some(entry => entry.date.startsWith(lastClosedMonth) || entry.refunds?.some(refund => refund.date.startsWith(lastClosedMonth)))
   const firstHistoryDay = firstHistoryMonth + '-01'
-  const report = useMemo(() => storyMonth && storyMonth >= firstHistoryMonth
-    ? monthlyReport(entries, openingCents, storyMonth, firstHistoryMonth) : null, [entries, openingCents, storyMonth, firstHistoryMonth])
+  const report = useMemo(() => storyMonth && storyMonth >= firstHistoryMonth && storyMonth < currentMonth
+    ? monthlyReport(postedEntries, openingCents, storyMonth, firstHistoryMonth) : null,
+  [postedEntries, openingCents, storyMonth, firstHistoryMonth, currentMonth])
   const wholeHistory = page === 'movimientos' && allMonths
   function notify(label: string, undo?: () => Promise<void>) { setToast({ label, undo }) }
   async function undoDeletion(action: () => Promise<void>) {
@@ -265,7 +268,7 @@ export default function App() {
       <div className="main-inner">
         <header className="page-header">
           <div><h1>{pages[page].label}</h1><p>{capitalize(dateLabel(today, { weekday: 'long', day: 'numeric', month: 'long' }))}</p></div>
-          <div className="header-actions"><MonthControl month={month} firstHistoryMonth={firstHistoryMonth} allMonths={wholeHistory} allowAll={page === 'movimientos'}
+          <div className="header-actions"><MonthControl month={month} firstHistoryMonth={firstHistoryMonth} currentMonth={currentMonth} allMonths={wholeHistory} allowAll={page === 'movimientos'}
             onChange={(next, all = false) => { setMonth(next); setAllMonths(all) }} />{addButton(false)}</div>
         </header>
         {loadState === 'error'
@@ -273,13 +276,13 @@ export default function App() {
           : loadState === 'ready' && <div key={page} className="page-content">
             {page === 'resumen' ? <>
               {reportLinkMonth && <div className="monthly-story-entry"><MonthlyStoryLink month={reportLinkMonth} unread={unreadReport} onClick={openMonthlyStory} /></div>}
-              <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={entries} month={month} firstHistoryDay={firstHistoryDay}
+              <Dashboard account={account} openingCents={openingCents} onOpening={() => setEditingOpening(openingCents)} entries={entries} month={month} firstHistoryDay={firstHistoryDay} today={today}
                 totals={totals} onAdd={add} onEdit={edit} onEditRefund={openRefunds}
                 favorites={favorites} onUseFavorite={favorite => setEditor({ date: calendarDay(), favorite })}
                 onManageFavorites={() => favorites.length ? setUtility('favorites') : editFavorite()}
                 onHistory={showHistory} onCategories={() => goTo('categorias')} />
             </>
-            : page === 'movimientos' ? <History entries={entries} month={wholeHistory ? null : month} firstHistoryDay={firstHistoryDay} category={category} onClearCategory={() => setCategory(null)}
+            : page === 'movimientos' ? <History entries={entries} month={wholeHistory ? null : month} firstHistoryDay={firstHistoryDay} today={today} category={category} onClearCategory={() => setCategory(null)}
               onEdit={edit} onEditRefund={openRefunds} onAdd={add} />
             : <CategoryView totals={totals} onHistory={showHistory} onAdd={add} />}
           </div>}
@@ -289,10 +292,10 @@ export default function App() {
       <button className="nav-item" onClick={() => setUtility('more')}><Ellipsis size={21} /><span>Más</span></button></nav>
     {editingOpening !== null && <OpeningBalance original={editingOpening} onClose={() => setEditingOpening(null)}
       onSaved={() => { setEditingOpening(null); void reload(); notify('Saldo inicial guardado') }} />}
-    {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} firstHistoryDay={firstHistoryDay} onClose={() => setEditor(null)}
+    {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} firstHistoryDay={firstHistoryDay} today={today} onClose={() => setEditor(null)}
       onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} onFavorite={changeFavorite} onRefunds={openRefunds}
       onDeleted={entry => saved(null, 'Movimiento eliminado', () => saveEntry(entry))} />}
-    {refundDialog && <Refunds entry={refundDialog.entry} selected={refundDialog.selected} firstHistoryDay={firstHistoryDay} onClose={() => {
+    {refundDialog && <Refunds entry={refundDialog.entry} selected={refundDialog.selected} firstHistoryDay={firstHistoryDay} today={today} onClose={() => {
       if (!refundDialog.selected) edit(refundDialog.entry)
       setRefundDialog(null)
     }} onSaved={(message, undo) => { setRefundDialog(null); void reload(); notify(message, undo) }} />}
@@ -327,14 +330,14 @@ export default function App() {
     {utility === 'designs' && <DesignPicker selected={design} originalTheme={theme} onChange={changeDesign}
       onClose={closeUtility} onBack={() => setUtility('appearance')} />}
     {utility === 'general' && <HistorySettings start={firstHistoryMonth} onClose={closeUtility} onBack={backToSettings} onSaved={next => {
-      setFirstHistoryMonth(next)
+      setHistoryStart(next)
       setMonth(selected => selected < next ? next : selected)
       setUtility(null)
       void reload()
       notify('Mes de inicio guardado')
     }} />}
     {utility === 'backup' && <Backups ledger={loadState === 'ready' ? {
-      entries, openingCents, reminders, favorites, settings: { historyStart: firstHistoryMonth, theme, design },
+      entries, openingCents, reminders, favorites, settings: { historyStart, theme, design },
     } : null} onClose={closeUtility} onBack={backToSettings}
       onRestored={() => { setUtility(null); void reload(); notify('Copia restaurada') }} />}
     {toast && <div className="toast"><span className="toast-message" role="status"><Check size={17} />{toast.label}</span>

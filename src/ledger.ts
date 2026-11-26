@@ -174,6 +174,14 @@ export function monthly(entries: Entry[], month: string) {
   return entries.filter(entry => entry.date.slice(0, 7) === month)
 }
 
+// Keep dates from older backups in storage until they can appear in the ledger.
+export function entriesThrough(entries: Entry[], day: string) {
+  return entries.filter(entry => entry.date <= day).map(entry => {
+    if (!entry.refunds?.some(refund => refund.date > day)) return entry
+    return { ...entry, refunds: entry.refunds.filter(refund => refund.date <= day) }
+  })
+}
+
 export function latestFirst(entries: Entry[]) {
   return [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt || a.id.localeCompare(b.id))
 }

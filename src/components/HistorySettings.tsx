@@ -18,7 +18,9 @@ export function HistorySettings({ start, onClose, onBack, onSaved }: {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const monthId = useId()
-  const next = year.trim().padStart(4, '0') + '-' + month
+  const lastMonth = Number(year) === currentYear ? current.slice(5) : '12'
+  const selectedMonth = month > lastMonth ? lastMonth : month
+  const next = year.trim().padStart(4, '0') + '-' + selectedMonth
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -37,8 +39,8 @@ export function HistorySettings({ start, onClose, onBack, onSaved }: {
         <p className="entry-hint">El calendario y los movimientos visibles empiezan en este mes. Las copias conservan todos los movimientos guardados.</p>
       </div>
       <div className="history-settings-fields">
-        <div className="field"><label htmlFor={monthId}>Mes</label><select id={monthId} value={month} onChange={event => setMonth(event.target.value)}>
-          {months.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+        <div className="field"><label htmlFor={monthId}>Mes</label><select id={monthId} value={selectedMonth} onChange={event => setMonth(event.target.value)}>
+          {months.filter(item => item.value <= lastMonth).map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select></div>
         <label className="field">Año<input type="number" inputMode="numeric" min="1" max={currentYear} required value={year}
           onChange={event => setYear(event.target.value)} /></label>
