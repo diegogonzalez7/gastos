@@ -535,6 +535,7 @@ test('un favorito conserva importe y categoría y abre un movimiento con fecha d
   await favorite.getByLabel('Concepto').fill('Café')
   await favorite.getByLabel('Categoría').selectOption('machine')
   await favorite.getByRole('button', { name: 'Guardar favorito' }).click()
+  await expect(favorite).toHaveCount(0)
   await balance(page, '0,00€')
   await page.reload()
   await page.getByRole('button', { name: 'Mes anterior' }).click()
