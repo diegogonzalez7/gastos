@@ -149,8 +149,8 @@ export function Dashboard({ account, openingCents, onOpening, totals, entries, m
     <Balance totals={totals} />
     <section className="panel account-strip" aria-label="Saldos de la cuenta">
       <button onClick={onOpening} aria-label="Editar saldo inicial"><small>Saldo inicial del banco</small><strong className="money">{money(openingCents)} <ChevronRight size={14} /></strong></button>
-      <div><small>Saldo bancario al cierre</small><strong className="money">{money(account.closing)}</strong></div>
-      <div><small>Saldo bancario total</small><strong className="money">{money(account.total)}</strong></div>
+      {month < today.slice(0, 7) && <div><small>Saldo bancario al cierre</small><strong className="money">{money(account.closing)}</strong></div>}
+      <div><small>Saldo bancario actual</small><strong className="money">{money(account.total)}</strong></div>
     </section>
     <QuickFavorites favorites={favorites} onUseFavorite={onUseFavorite} onManageFavorites={onManageFavorites} />
     <div className="overview-panels">
