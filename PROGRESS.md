@@ -81,6 +81,7 @@ Se superaron siete pruebas de dominio y dieciocho pruebas de navegador en la com
 
 - El panel de Recordatorios permite elegir qué pagar y cuándo, editar el aviso y marcar el pago como resuelto.
 - Cada recordatorio genera una cita con alerta a la hora indicada. En iPhone también se puede enviar al atajo de Recordatorios de Apple.
+- Los recordatorios pendientes permiten registrar un gasto con el concepto, el importe previsto y la categoría ya preparados. Guardar el gasto marca el recordatorio como pagado en la misma operación.
 - Las copias JSON guardan los recordatorios junto a los movimientos. Las copias creadas antes de esta función mantienen los recordatorios que ya existen en el dispositivo.
 - La guía describe cómo mover el mismo JSON entre iPhone y ordenador con iCloud Drive o AirDrop.
 

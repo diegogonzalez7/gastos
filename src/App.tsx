@@ -4,7 +4,7 @@ import {
   List, MonitorSmartphone, Moon, Palette, PieChart, Plus, Settings, SlidersHorizontal, Sun, X, type LucideIcon,
 } from 'lucide-react'
 import {
-  accountBalances, calendarDay, capitalize, dateLabel, entriesThrough, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
+  accountBalances, calendarDay, capitalize, dateLabel, displayCategory, entriesThrough, latestFirst, monthly, shiftMonth, summarize, type CategoryId, type Entry, type Refund,
 } from './ledger'
 import { readLedger, saveDesign, saveEntry, saveFavorite, saveTheme, storageMessage, watchEntries } from './storage'
 import { Brand, Modal } from './components/ui'
@@ -211,6 +211,14 @@ export default function App() {
     setEditor({ date, category: id })
   }
   function edit(entry: Entry) { setEditor({ date: entry.date, original: entry }) }
+  function registerReminder(reminder: Reminder) {
+    setUtility(null)
+    setEditor({ date: calendarDay(), reminder, category: displayCategory(reminder.category ?? 'otherExpense') })
+  }
+  function closeEditor() {
+    if (editor?.reminder) setUtility('reminders')
+    setEditor(null)
+  }
   function openRefunds(entry: Entry, selected?: Refund) {
     setEditor(null)
     setRefundDialog({ entry, selected })
@@ -292,7 +300,7 @@ export default function App() {
       <button className="nav-item" onClick={() => setUtility('more')}><Ellipsis size={21} /><span>Más</span></button></nav>
     {editingOpening !== null && <OpeningBalance original={editingOpening} onClose={() => setEditingOpening(null)}
       onSaved={() => { setEditingOpening(null); void reload(); notify('Saldo inicial guardado') }} />}
-    {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} firstHistoryDay={firstHistoryDay} today={today} onClose={() => setEditor(null)}
+    {editor && <Editor key={editor.original?.id ?? 'new'} draft={editor} firstHistoryDay={firstHistoryDay} today={today} onClose={closeEditor}
       onDuplicate={entry => setEditor({ date: calendarDay(), copy: entry })} onSaved={saved} onFavorite={changeFavorite} onRefunds={openRefunds}
       onDeleted={entry => saved(null, 'Movimiento eliminado', () => saveEntry(entry))} />}
     {refundDialog && <Refunds entry={refundDialog.entry} selected={refundDialog.selected} firstHistoryDay={firstHistoryDay} today={today} onClose={() => {
@@ -307,7 +315,7 @@ export default function App() {
       <button className="more-backup more-reminders" disabled={loadState !== 'ready'} onClick={() => setUtility('reminders')}><Bell size={20} />Recordatorios<ChevronRight size={17} /></button>
       <button className="more-backup" onClick={backToSettings}><Settings size={20} />Ajustes<ChevronRight size={17} /></button>
     </Modal>}
-    {utility === 'reminders' && <Reminders reminders={reminders} onClose={() => setUtility(null)} onChange={reload} />}
+    {utility === 'reminders' && <Reminders reminders={reminders} onClose={() => setUtility(null)} onChange={reload} onRegister={registerReminder} />}
     {utility === 'settings' && <Modal title="Ajustes" onClose={closeUtility}>
       <div className="settings-navigation">
         {settingsSections.map(({ id, label, detail, icon: Icon }) => <button key={id} type="button" aria-label={label}

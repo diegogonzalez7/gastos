@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from 'react'
-import { Bell, CalendarPlus, ChevronRight, Download, Plus, Share2, Trash2 } from 'lucide-react'
+import { Bell, CalendarPlus, ChevronRight, Download, Plus, ReceiptText, Share2, Trash2 } from 'lucide-react'
 import { downloadFile } from '../files'
-import { newEntryId } from '../ledger'
+import { categories, categoryIds, displayCategory, newEntryId, parseAmount, type CategoryId } from '../ledger'
 import {
   parseReminderTime, reminderCalendar, reminderDate, reminderInput, reminderShortcut,
   reminderTitleLimit, type Reminder,
 } from '../reminders'
 import { changeReminder, saveReminder, storageMessage } from '../storage'
-import { Modal } from './ui'
+import { AmountInput, Modal } from './ui'
+
+const expenseCategories = categoryIds.filter(id => categories[id].kind === 'expense')
+const expectedAmount = (cents?: number) => cents === undefined ? '' : (cents / 100).toFixed(2).replace('.', ',')
 
 function nextMorning() {
   const date = new Date()
@@ -20,16 +23,20 @@ function calendarFile(reminder: Reminder) {
   return new File([reminderCalendar(reminder)], 'mi-dinero-pago.ics', { type: 'text/calendar' })
 }
 
-export function Reminders({ reminders, onClose, onChange }: {
-  reminders: Reminder[], onClose: () => void, onChange: () => void,
+export function Reminders({ reminders, onClose, onChange, onRegister }: {
+  reminders: Reminder[], onClose: () => void, onChange: () => void, onRegister: (reminder: Reminder) => void,
 }) {
-  const [form, setForm] = useState<{ original?: Reminder, title: string, dateTime: string } | null>(null)
+  const [form, setForm] = useState<{
+    original?: Reminder, title: string, dateTime: string, amount: string, category: CategoryId | '',
+  } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const original = form?.original
-  const clean = form && original && form.title === original.title && form.dateTime === reminderInput(original.at)
+  const savedCategory = original?.category ? displayCategory(original.category) : ''
+  const clean = form && original && form.title === original.title && form.dateTime === reminderInput(original.at) &&
+    form.amount === expectedAmount(original.cents) && form.category === savedCategory
   const availableAlert = !!(clean && original && !original.paid && original.at > Date.now())
   const [canShare] = useState(() => !!navigator.share &&
     !!navigator.canShare?.({ files: [new File(['BEGIN:VCALENDAR'], 'pago.ics', { type: 'text/calendar' })] }))
@@ -42,6 +49,8 @@ export function Reminders({ reminders, onClose, onChange }: {
       original: reminder,
       title: reminder?.title ?? '',
       dateTime: reminder ? reminderInput(reminder.at) : nextMorning(),
+      amount: expectedAmount(reminder?.cents),
+      category: reminder?.category ? displayCategory(reminder.category) : '',
     })
   }
 
@@ -73,12 +82,17 @@ export function Reminders({ reminders, onClose, onChange }: {
     if (!form || busy) return
     const at = original && form.dateTime === reminderInput(original.at) ? original.at : parseReminderTime(form.dateTime)
     const title = form.title.trim()
+    const cents = parseAmount(form.amount)
     if (!title) { setError('Escribe qué quieres pagar.'); return }
     if (at === null || (at <= Date.now() && at !== original?.at)) {
       setError('Elige una fecha y hora futuras.')
       return
     }
-    void update({ id: original?.id ?? newEntryId(), title, at, paid: original?.paid ?? false },
+    if (form.amount && cents === null) { setError('Introduce un importe válido mayor que 0 €.'); return }
+    void update({
+      id: original?.id ?? newEntryId(), title, at, paid: original?.paid ?? false,
+      ...(cents === null ? {} : { cents }), ...(form.category ? { category: form.category } : {}),
+    },
       'Recordatorio guardado.')
   }
 
@@ -111,9 +125,20 @@ export function Reminders({ reminders, onClose, onChange }: {
         <label className="field">Fecha y hora del aviso<input type="datetime-local" required
           max="9999-12-31T23:59" value={form.dateTime}
           onChange={event => setForm({ ...form, dateTime: event.target.value })} /></label>
+        <AmountInput label="Importe previsto (opcional)" required={false} value={form.amount}
+          onChange={amount => setForm({ ...form, amount })} />
+        <label className="field">Categoría (opcional)<select value={form.category}
+          onChange={event => setForm({ ...form, category: event.target.value as CategoryId | '' })}>
+          <option value="">Sin categoría</option>
+          {form.category && !expenseCategories.includes(form.category) && <option value={form.category}>{categories[form.category].name}</option>}
+          {expenseCategories.map(id => <option key={id} value={id}>{categories[id].name}</option>)}
+        </select></label>
         <button className="primary" disabled={busy || !!clean}>Guardar recordatorio</button>
       </form>
       {original && <>
+        {!original.paid && <button className="secondary reminder-edit-actions" disabled={busy || !clean} onClick={() => onRegister(original)}>
+          <ReceiptText size={16} />Registrar gasto
+        </button>}
         {availableAlert && <section className="reminder-alert">
           <h3>Programar aviso</h3>
           <p>Añade la cita a tu calendario con una alerta a la hora elegida. Si cambias la fecha o pagas antes, actualiza el aviso también allí.</p>

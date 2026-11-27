@@ -67,6 +67,8 @@ Puedes usar **Desconectar Dropbox en este dispositivo** al acabar, especialmente
 
 Abre **Más → Recordatorios** en el móvil o **Recordatorios** en la barra lateral del ordenador. Crea un pago, elige la fecha y la hora y guarda. Desde el recordatorio puedes editarlo, marcarlo como pagado o eliminarlo. Los recordatorios nuevos se incluyen en el JSON y las copias antiguas conservan los recordatorios del dispositivo.
 
+Puedes guardar un importe previsto y una categoría en el recordatorio. Cuando pagues, abre el recordatorio pendiente y pulsa **Registrar gasto**. El formulario propone la fecha de hoy y toma el concepto del título. Revisa el importe, la categoría, la fecha y la forma de pago y pulsa **Guardar gasto**. Al guardar, el gasto entra en el historial y el recordatorio se marca como pagado.
+
 Para recibir el aviso con Mi Dinero cerrada, programa el aviso en el dispositivo desde el recordatorio guardado.
 
 - **Calendario.** Usa **Descargar cita** o **Compartir cita**, si el navegador admite compartir ese archivo. Importa el archivo `.ics` en tu calendario y verifica que la cita tiene un aviso a la hora de inicio. Si el iPhone no permite importar el archivo directamente, usa el atajo siguiente.

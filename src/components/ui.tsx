@@ -56,8 +56,8 @@ export function FittedAmount({ cents, className }: { cents: number, className: s
   </div>
 }
 
-export function AmountInput({ label, value, onChange, selectOnFocus = false }: {
-  label: string, value: string, onChange: (value: string) => void, selectOnFocus?: boolean,
+export function AmountInput({ label, value, onChange, selectOnFocus = false, required = true }: {
+  label: string, value: string, onChange: (value: string) => void, selectOnFocus?: boolean, required?: boolean,
 }) {
   const placeholder = '0,00'
   return <label className="field">{label}
@@ -65,7 +65,7 @@ export function AmountInput({ label, value, onChange, selectOnFocus = false }: {
       <span className="amount-input-value">
         <span className="amount-input-measure" aria-hidden="true">{value || placeholder}</span>
         <input type="text" inputMode="decimal" placeholder={placeholder} aria-label={label}
-          maxLength={20} required autoComplete="off" value={value}
+          maxLength={20} required={required} autoComplete="off" value={value}
           onFocus={selectOnFocus ? event => event.currentTarget.select() : undefined}
           onChange={event => {
             let next = event.currentTarget.value.trim().replace(/^[,.]/, '0,')

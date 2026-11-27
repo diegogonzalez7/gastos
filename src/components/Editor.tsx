@@ -2,10 +2,11 @@ import { useId, useState, type FormEvent } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Banknote, Copy, RotateCcw, Trash2 } from 'lucide-react'
 import { calendarDay, categories, categoryIds, displayCategory, MAX_CONCEPT, money, monthLabel, netExpense, newEntryId, parseAmount, paymentSource, refundedCents, validDay, type CategoryId, type Entry, type Kind, type PaymentSource } from '../ledger'
 import { favoriteName, type Favorite } from '../favorites'
-import { changeEntry, saveEntry, storageMessage } from '../storage'
+import type { Reminder } from '../reminders'
+import { changeEntry, saveEntry, saveReminderPayment, storageMessage } from '../storage'
 import { AmountInput, Modal } from './ui'
 
-export interface EditorDraft { original?: Entry, copy?: Entry, category?: CategoryId, date: string, favorite?: Favorite, mode?: 'favorite' }
+export interface EditorDraft { original?: Entry, copy?: Entry, category?: CategoryId, date: string, favorite?: Favorite, mode?: 'favorite', reminder?: Reminder }
 
 export function Editor({ draft, firstHistoryDay, today, onClose, onDuplicate, onRefunds, onSaved, onDeleted, onFavorite }: {
   firstHistoryDay: string, today: string,
@@ -14,13 +15,15 @@ export function Editor({ draft, firstHistoryDay, today, onClose, onDuplicate, on
   onRefunds: (entry: Entry) => void,
 }) {
   const old = draft.original
+  const reminder = draft.reminder
   const editingFavorite = draft.mode === 'favorite'
   const oldFavorite = editingFavorite ? draft.favorite : undefined
   const source = old ?? draft.copy ?? draft.favorite
   const initialCategory = source ? displayCategory(source.category) : draft.category ?? 'food'
   const initialKind = categories[initialCategory].kind
-  const initialAmount = source ? (source.cents / 100).toFixed(2).replace('.', ',') : ''
-  const initialConcept = source?.concept ?? ''
+  const initialCents = source?.cents ?? reminder?.cents
+  const initialAmount = initialCents === undefined ? '' : (initialCents / 100).toFixed(2).replace('.', ',')
+  const initialConcept = source?.concept ?? reminder?.title ?? ''
   const initialPayment = paymentSource({ category: initialCategory, payment: source?.payment })
   const [kind, setKind] = useState<Kind>(initialKind)
   const [category, setCategory] = useState<CategoryId>(initialCategory)
@@ -87,8 +90,9 @@ export function Editor({ draft, firstHistoryDay, today, onClose, onDuplicate, on
         ...(old?.refunds?.length ? { refunds: old.refunds } : {}),
       }
       if (old) await changeEntry(old, entry)
+      else if (reminder) await saveReminderPayment(reminder, entry)
       else await saveEntry(entry)
-      onSaved(date, old ? 'Cambios guardados' : 'Movimiento guardado')
+      onSaved(date, reminder ? 'Gasto guardado y recordatorio marcado como pagado' : old ? 'Cambios guardados' : 'Movimiento guardado')
     } catch (err) { setError(storageMessage(err)); setBusy(false) }
   }
 
@@ -105,7 +109,7 @@ export function Editor({ draft, firstHistoryDay, today, onClose, onDuplicate, on
 
   const title = discard ? '¿Descartar cambios?' : confirmDelete ? (oldFavorite ? 'Eliminar favorito' : 'Eliminar movimiento')
     : editingFavorite ? (oldFavorite ? 'Editar favorito' : 'Nuevo favorito')
-    : old ? 'Editar movimiento' : draft.copy ? 'Duplicar movimiento' : 'Nuevo movimiento'
+    : reminder ? 'Registrar gasto' : old ? 'Editar movimiento' : draft.copy ? 'Duplicar movimiento' : 'Nuevo movimiento'
   return <Modal title={title} onClose={requestClose} busy={busy}>
     {discard ? <div className="confirm-panel">
       <p>Los cambios que has hecho en este formulario se perderán si los descartas.</p>
@@ -123,11 +127,12 @@ export function Editor({ draft, firstHistoryDay, today, onClose, onDuplicate, on
         <button className="danger" disabled={busy} onClick={remove}>Sí, eliminar</button>
       </div>
     </div> : <form onSubmit={save} className="entry-form">
+      {reminder ? <p className="entry-hint">Al guardar el gasto, el recordatorio se marcará como pagado.</p> :
       <div className={'kind-switch' + (editingFavorite ? '' : ' movement-kind')} role="group" aria-label="Tipo de movimiento">
         <button type="button" aria-pressed={kind === 'expense'} onClick={() => selectKind('expense')}><ArrowUpRight size={18} />Gasto</button>
         <button type="button" aria-pressed={kind === 'income'} disabled={alreadyRefunded > 0} onClick={() => selectKind('income')}><ArrowDownLeft size={18} />Ingreso</button>
         {!editingFavorite && <button type="button" aria-pressed={kind === 'withdrawal'} disabled={alreadyRefunded > 0} onClick={() => selectKind('withdrawal')}><Banknote size={18} />Retirada</button>}
-      </div>
+      </div>}
       {alreadyRefunded > 0 && <p className="entry-hint">Este movimiento tiene reembolsos vinculados y se conserva como gasto.</p>}
       {kind === 'withdrawal' && <p className="entry-hint">Sacar efectivo reduce el saldo bancario. Los gastos se registran al usar ese dinero.</p>}
       <AmountInput label="Importe" value={amount} onChange={setAmount} />
@@ -157,7 +162,7 @@ export function Editor({ draft, firstHistoryDay, today, onClose, onDuplicate, on
           <RotateCcw size={16} />{alreadyRefunded ? 'Ver reembolsos' : 'Registrar reembolso'}
         </button>
       </div>}
-      <button className="primary wide" type="submit" disabled={busy}>{busy ? 'Guardando…' : editingFavorite ? 'Guardar favorito' : old ? 'Guardar cambios' : 'Guardar movimiento'}</button>
+      <button className="primary wide" type="submit" disabled={busy}>{busy ? 'Guardando…' : reminder ? 'Guardar gasto' : editingFavorite ? 'Guardar favorito' : old ? 'Guardar cambios' : 'Guardar movimiento'}</button>
       {(old || oldFavorite) && <div className="editor-actions">
         {old && <button className="text-button" type="button" disabled={busy} onClick={() => dirty ? setDiscard('duplicate') : leave('duplicate')}>
           <Copy size={15} />Duplicar movimiento</button>}

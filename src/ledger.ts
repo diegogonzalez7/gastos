@@ -1,4 +1,4 @@
-import { readReminders, type Reminder } from './reminders.ts'
+import { reminderTitleLimit, validReminderTime, type Reminder } from './reminders.ts'
 import { validDesign, validTheme, type Design, type Theme } from './appearance.ts'
 
 export type Kind = 'expense' | 'income' | 'withdrawal'
@@ -217,6 +217,25 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 const validId = (value: unknown): value is string => typeof value === 'string' && /^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value)
+
+function readReminders(value: unknown): Reminder[] {
+  if (!Array.isArray(value)) throw new Error('La lista de recordatorios de la copia no es válida.')
+  const ids = new Set<string>()
+  return value.map(item => {
+    if (!record(item)) throw new Error('La copia contiene un recordatorio ilegible.')
+    const { id, title, at, paid, cents, category } = item
+    if (!validId(id) || ids.has(id.toLowerCase()) || typeof title !== 'string' || !title.trim() ||
+      title.length > reminderTitleLimit || !validReminderTime(at) || typeof paid !== 'boolean' ||
+      (cents !== undefined && (typeof cents !== 'number' || !Number.isSafeInteger(cents) || cents <= 0 || cents > MAX_CENTS)) ||
+      (category !== undefined && (typeof category !== 'string' || !Object.hasOwn(categories, category) ||
+        categories[category as CategoryId].kind !== 'expense'))) {
+      throw new Error('La copia contiene recordatorios inválidos o duplicados.')
+    }
+    ids.add(id.toLowerCase())
+    return { id: id.toLowerCase(), title: title.trim(), at, paid,
+      ...(cents === undefined ? {} : { cents }), ...(category === undefined ? {} : { category: category as CategoryId }) }
+  })
+}
 
 export function validFavorite(value: unknown): value is Favorite {
   return record(value) && validId(value.id) && typeof value.category === 'string' && Object.hasOwn(categories, value.category) &&

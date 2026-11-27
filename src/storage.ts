@@ -113,6 +113,24 @@ export async function saveEntry(entry: Entry) {
   notifyReaders()
 }
 
+export async function saveReminderPayment(reminder: Reminder, entry: Entry) {
+  const tx = (await database()).transaction(['entries', 'reminders'], 'readwrite')
+  const reminders = tx.objectStore('reminders')
+  try {
+    if (reminder.paid || !sameReminder(await reminders.get(reminder.id), reminder)) throw new ChangedDataError()
+    await Promise.all([
+      tx.objectStore('entries').add(entry),
+      reminders.put({ ...reminder, paid: true }),
+      tx.done,
+    ])
+  } catch (error) {
+    try { tx.abort() } catch { /* An IndexedDB request may have already aborted the transaction. */ }
+    await tx.done.catch(() => {})
+    throw error
+  }
+  notifyReaders()
+}
+
 export async function changeEntry(original: Entry, replacement: Entry | null) {
   const tx = (await database()).transaction('entries', 'readwrite')
   try {

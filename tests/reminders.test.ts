@@ -26,6 +26,10 @@ test('el atajo recibe la misma hora y la copia valida recordatorios sin cambiar 
   assert.equal(parseReminderTime('2026-02-30T09:00'), null)
   const ledger = { entries: [], openingCents: 0, reminders: [payment] }
   assert.deepEqual(readBackup(JSON.stringify(makeBackup(ledger))), ledger)
+  const planned: Reminder = { ...payment, cents: 1299, category: 'spotify' }
+  assert.deepEqual(readBackup(JSON.stringify(makeBackup({ ...ledger, reminders: [planned] }))).reminders, [planned])
+  assert.throws(() => readBackup(JSON.stringify(makeBackup({ ...ledger, reminders: [{ ...planned, category: 'salary' }] }))))
+  assert.throws(() => readBackup(JSON.stringify(makeBackup({ ...ledger, reminders: [{ ...planned, cents: 0 }] }))))
   assert.throws(() => readBackup(JSON.stringify(makeBackup({ ...ledger, reminders: [payment, payment] }))))
   assert.equal(readBackup(JSON.stringify(makeBackup({ entries: [], openingCents: 0 }))).reminders, undefined)
 })
